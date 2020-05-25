@@ -1,68 +1,104 @@
 import flask
-import numpy as np
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.text import text_to_word_sequence
-from keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import load_model
-import pickle as pkl
-import tensorflow as tf
+import os
+import json
 from flask_cors import CORS, cross_origin
+from flask_sqlalchemy import SQLAlchemy
+from app.api.api import api
 
 
-print(tf.__version__)
 app = flask.Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-model = load_model('../smss-malurl-model-nidl-1-relic.h5')
-model.load_weights('../smss-malurl-nidl1-ne3-lr0.001-bs16-weights-00000003.h5')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.secret_key = os.environ.get('SECRET_KEY')
 
-tokenizer = Tokenizer()
-with open('../tokenizer.pickle', 'rb') as tokenizer_file:
-    tokenizer = pkl.load(tokenizer_file)
-
-
-def tokenize(url):
-    tokens = url.replace('?', ' ').replace('&', ' ').replace('+', ' ').replace('=', ' ').replace('://', ' ').replace('/', ' ').replace('-', ' ').replace('.',' ').replace('com', ' ').replace('www',' ').replace('https', ' ').replace('http', ' ')
-    tokens = " ".join(tokens.split())
-    return tokens
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 @app.route("/api/AnalyzeUrl", methods=["POST"])
 @cross_origin()
-def analyze_url():  
-    data = flask.request.json
-    response = {
-        "status": 500,
-        "urlGood": False,
-        "tokens": "",
-        "sequence": "",
-        "errorMessage": ""
-    }
-    if (data == None):
-        response["errorMessage"] = "Error: No URL recieved."
-    else:
-        url = data.get("url")
-        print("Recieved url: {}".format(url))
-        tokens = [tokenize(url)]
-        print("URL tokens: {}".format(tokens[0]))
-        seq = tokenizer.texts_to_sequences(np.array(tokens))
-        response["tokens"] = tokens
-        seq_to_save = [str(integer) for integer in seq[0]]
-        response["sequence"] = ' '.join(seq_to_save)
-        padded_seq = np.array(pad_sequences(seq, padding='post', maxlen=60))
-        print("Seq: {}".format(seq[0]))
-        prediction = model.predict(padded_seq)
-        print("Prediction: {}".format(prediction))
-        if (prediction < 0.5):
-            response["urlGood"] = True
-            response["status"] = 200
-        elif (prediction > 0.5):
-            response["urlGood"] = False
-            response["status"] = 200
-        else:
-            response["urlGood"] = False
-            response["errorMessage"] = "Error: Prediction not clear"
-    return flask.jsonify(response)
+def analyze_url():
+    return api.create_and_or_analyze_url(flask.request)
+
+
+@app.route("/api/GetUrl", methods=["POST"])
+@cross_origin()
+def get_url():
+    return flask.jsonify(api.get_url(flask.request))
+
+
+@app.route("/api/UpdateUrl", methods=["POST"])
+@cross_origin()
+def update_url():
+    return flask.jsonify(api.update_url(flask.request))
+
+
+@app.route("/api/RegisterUser", methods=["POST"])
+@cross_origin()
+def register_user():
+    return flask.jsonify(api.register_user(flask.request))
+
+
+@app.route("/api/LoginUser", methods=["POST"])
+@cross_origin()
+def login_user():
+    return flask.jsonify(api.login_user(flask.request))
+
+
+@app.route("/api/UpdateUser", methods=["POST"])
+@cross_origin()
+def update_user():
+    return flask.jsonify(api.update_user(flask.request))
+
+
+@app.route("/api/DeleteUser", methods=["POST"])
+@cross_origin()
+def delete_user():
+    return flask.jsonify(api.delete_user(flask.request))
+
+
+@app.route("/api/UpdateSession", methods=["POST"])
+@cross_origin()
+def update_session():
+    return flask.jsonify(api.update_session(flask.request))
+
+
+@app.route("/api/DeleteSession", methods=["POST"])
+@cross_origin()
+def delete_session():
+    return flask.jsonify(api.delete_session(flask.request))
+
+
+@app.route("/api/CreatePassword", methods=["POST"])
+@cross_origin()
+def create_password():
+    return flask.jsonify(api.create_password(flask.request))
+
+
+@app.route("/api/UpdatePassword", methods=["POST"])
+@cross_origin()
+def update_password():
+    return flask.jsonify(api.update_password(flask.request))
+
+
+@app.route("/api/ListPasswords", methods=["POST"])
+@cross_origin()
+def list_passwords():
+    return flask.jsonify(api.list_passwords(flask.request))
+
+
+@app.route("/api/DeletePassword", methods=["POST"])
+@cross_origin()
+def delete_password():
+    return flask.jsonify(api.delete_password(flask.request))
+
+
+@app.route("/api/GetPassword", methods=["POST"])
+@cross_origin()
+def get_password():
+    return flask.jsonify(api.get_password(flask.request))
 
 
 app.run(host='0.0.0.0')
