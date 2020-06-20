@@ -5,6 +5,7 @@ from tensorflow.keras.models import load_model
 from tokenizer import tokenize, tokenizer
 from keras.preprocessing.text import text_to_word_sequence
 from keras.preprocessing.sequence import pad_sequences
+from datetime import datetime
 import numpy as np
 import uuid
 import flask
@@ -16,43 +17,20 @@ app = flask.Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql://secure_suite:IWANTTOBEHACKED@localhost:3306/secure_suite')
 app.secret_key = os.environ.get('SECRET_KEY')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
 # model
-class Role(db.Model):
-    __tablename__ = 'role'
-    role_key = db.Column(db.String(36), primary_key=True, nullable=False)
-    role_name = db.Column(db.String(255), nullable=False)
-
-    def __init__(self, role_key, role_name):
-        self.role_key = role_key
-        self.role_name = role_name
-
-
-class Permission(db.Model):
-    __tablename__ = 'permission'
-    permission_key = db.Column(db.String(36), primary_key=True, nullable=False)
-    ref_role_key = db.Column(db.String(36), db.ForeignKey('role.role_key'))
-    permission_name = db.Column(db.String(255), nullable=False)
-
-    def __init__(self, permission_key, ref_role_key, permission_name):
-        self.permission_key = permission_key
-        self.ref_role_key = ref_role_key
-        self.permission_name = permission_name
-
-
 class User(db.Model):
     __tablename__ = 'user'
-    user_key = db.Column(db.String(36), primary_key=True, nullable=False)
-    ref_role_key = db.Column(db.String(36), db.ForeignKey('role.role_key'))
-    user_name = db.Column(db.String(50), nullable=False)
-    user_email = db.Column(db.String(50), nullable=False)
-    user_password = db.Column(db.String(50), nullable=False)
-    user_salt = db.Column(db.String(50), nullable=False)
+    user_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    user_name = db.Column(db.String(50), nullable=False, unique=True)
+    user_email = db.Column(db.String(50), nullable=False, unique=True)
+    user_password = db.Column(db.String(255), nullable=False)
+    user_salt = db.Column(db.String(255), nullable=False)
 
     def __init__(self, user_key, user_name, user_email, user_password, user_salt):
         self.user_key = user_key
@@ -62,11 +40,24 @@ class User(db.Model):
         self.user_salt = user_salt
 
 
+class Session(db.Model):
+    __tablename__ = 'session'
+    session_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'), unique=True)
+    time_create = db.Column(db.DateTime(), nullable=False, default=datetime.utcnow())
+    time_update = db.Column(db.DateTime())
+    locked_out = db.Column(db.Boolean(), default=False, nullable=False)
+
+    def __init__(self, session_key, ref_user_key):
+        self.session_key = session_key
+        self.ref_user_key = ref_user_key
+
+
 class Category(db.Model):
     __tablename__ = 'category'
-    category_key = db.Column(db.String(36), primary_key=True, nullable=False)
+    category_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'))
-    category_name = db.Column(db.String(10), nullable=False)
+    category_name = db.Column(db.String(10), nullable=False, unique=True)
     category_description = db.Column(db.Text, nullable=False)
 
     def __init__(self, category_key, ref_user_key, category_name, category_description):
@@ -78,15 +69,17 @@ class Category(db.Model):
 
 class Url(db.Model):
     __tablename__ = 'url'
-    url_key = db.Column(db.String(36), primary_key=True, nullable=False)
+    url_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'))
+    url_string = db.Column(db.String(36), nullable=False, unique=True)
     url_tokens = db.Column(db.Text, nullable=False)
     url_sequence = db.Column(db.Text, nullable=False)
     url_good = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, url_key, ref_user_key, url_tokens, url_sequence, url_good):
+    def __init__(self, url_key, ref_user_key, url_string, url_tokens, url_sequence, url_good):
         self.url_key = url_key
         self.ref_user_key = ref_user_key
+        self.url_string = url_string
         self.url_tokens = url_tokens
         self.url_sequence = url_sequence
         self.url_good = url_good
@@ -94,7 +87,7 @@ class Url(db.Model):
 
 class Password(db.Model):
     __tablename__ = 'password'
-    password_key = db.Column(db.String(36), primary_key=True, nullable=False)
+    password_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey(
         'user.user_key'), nullable=False)
     ref_category_key = db.Column(
@@ -141,17 +134,28 @@ NOT_FOUND_ERROR_CODE = 404
 NOT_FOUND_ERROR_MESSAGE = "Resource not found"
 
 
+# User auth
+def validate_user_and_session(user_key, session_key):
+    user = User.query.get(user_key)
+    session = Session.query.get(session_key)
+    if (user.user_key == session.ref_user_key && session.locked_out == False):
+        return True
+    else:
+        return False
+
+
 # Url API
-def create_and_or_analyze_url(request):
+def create_and_or_analyze_url_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             url = data["url"]
-            check = Url.query.filter_by(url.url_sequence).first()
+            check = Url.query.filter_by(url_string=url).first()
+            print(check)
             if (check == None):
                 tokens = [tokenize(url)]
                 seq = tokenizer.texts_to_sequences(np.array(tokens))
@@ -170,6 +174,9 @@ def create_and_or_analyze_url(request):
                     response["status"] = SUCCESS_STATUS
                     response["url_good"] = False
                     response["message"] = "Error: Prediction not clear"
+                create = Url(uuid.uuid4(), data["ref_user_key"], url, tokens, seq, response["url_good"])
+                db.session.add(create)
+                db.session.commit()
             else:
                  response["status"] = SUCCESS_STATUS
                  response["url_good"] = check.url_good
@@ -177,10 +184,10 @@ def create_and_or_analyze_url(request):
     return response
 
 
-def get_url(request):
+def get_url_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -195,10 +202,10 @@ def get_url(request):
     return response
 
 
-def update_url(request):
+def update_url_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -216,10 +223,10 @@ def update_url(request):
     return response
 
 
-def list_urls(request):
+def list_urls_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -236,10 +243,10 @@ def list_urls(request):
 
 
 # User API
-def register_user(request):
+def register_user_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -247,11 +254,15 @@ def register_user(request):
             try:
                 create = data["user"]
                 salt = uuid.uuid4().hex
-                hashed_password = hashlib.sha512(create.user_password + salt).hexdigest()
-                user = User(uuid.uuid4(), create.user_name, create.user_email, hashed_password, salt)
+                hashed_password = hashlib.sha512((create["user_password"] + salt).encode('utf-8')).hexdigest()
+                user = User(uuid.uuid4(),create["user_name"], create["user_email"], hashed_password, salt)
                 db.session.add(user)
                 db.session.commit()
-                response["user"] = user
+                response["user"] = {
+                    "user_key": user.user_key,
+                    "user_name": user.user_name,
+                    "user_email": user.user_email
+                }
                 response["status"] = SUCCESS_STATUS
                 response["message"] = SUCCESS_MESSAGE_DEFAULT
             except Exception as e:
@@ -260,18 +271,38 @@ def register_user(request):
     return response
 
 
-def login_user(request):
+def login_user_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
                 user = User.query.filter_by(user_name=data["user_name"]).first()
-                if (user.password == hashlib.sha512("user_password"+ user.salt).hexdigest()):
-                    response["user"] = user
+                if (user.user_password == hashlib.sha512(("user_password"+ user.user_salt).encode('utf-8')).hexdigest()):
+                    check_session = Session.query.filter_by(ref_user_key=user.user_key).first()
+                    if check_session != None:
+                        response["status"] = UNAUTHORIZED_ERROR_STATUS
+                        response["message"] = "User already logged in."
+                        return response
+                    response["user"] = {
+                        "user_key": user.user_key,
+                        "ref_role_key": user.ref_role_key,
+                        "user_name": user.user_name,
+                        "user_email": user.user_email
+                    }
+                    session = Session(uuid.uuid4(), user.user_key)
+                    db.session.add(session)
+                    db.session.commit()
+                    response["session"] = {
+                        "session_key": session.session_key,
+                        "ref_user_key": session.ref_user_key,
+                        "time_create": session.time_create,
+                        "time_update": session.time_update,
+                        "locked_out": session.locked_out
+                    }
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 else:
@@ -283,10 +314,32 @@ def login_user(request):
     return response
 
 
-def update_user(request):
+def logout_user_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
+        if (data == None):
+            response["status"] = SERVER_ERROR_STATUS
+            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+        else:
+            try:
+                user = User.query.get(data["user_key"])
+                session = Session.query.get(data["session_key"])
+                if session.ref_user_key == user.user_key:
+                    db.session.delete(session)
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = "User logged out."
+            except Exception as e:
+                response["status"] = SERVER_ERROR_STATUS
+                response["message"] = str(e)
+    return response
+
+
+def update_user_api(request):
+    response = {}
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -303,10 +356,10 @@ def update_user(request):
     return response
 
 
-def delete_user(request):
+def delete_user_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -324,10 +377,10 @@ def delete_user(request):
 
 
 # Password API
-def create_password(request):
+def create_password_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -344,10 +397,10 @@ def create_password(request):
     return response
 
 
-def get_password(request):
+def get_password_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -362,10 +415,10 @@ def get_password(request):
     return response
 
 
-def update_password(request):
+def update_password_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -383,10 +436,10 @@ def update_password(request):
     return response
 
 
-def list_passwords(request):
+def list_passwords_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -401,10 +454,10 @@ def list_passwords(request):
     return response
 
 
-def delete_password(request):
+def delete_password_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if (data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -422,17 +475,16 @@ def delete_password(request):
 
 
 # Role API
-def create_role(request):
+def create_role_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
-                role = request["role"]
-                db.session.add(Role(uuid.uuid4(), role.role_name))
+                db.session.add(Role(uuid.uuid4(), data["role"]["role_name"]))
                 db.session.commit()
                 response["status"] = CREATE_SUCCESS_STATUS
                 response["message"] = CREATE_SUCCESS_MESSAGE
@@ -442,18 +494,17 @@ def create_role(request):
     return response
 
 
-def update_role(request):
+def update_role_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
-                update = data["role"]
-                role = Role.query.get(update.role_key)
-                role = update
+                role = Role.query.get(data["role"]["role_key"])
+                role.role_name = data["role"]["role_name"]
                 db.session.commit()
                 response["status"] = SUCCESS_STATUS
                 response["message"] = SUCCESS_MESSAGE_DEFAULT
@@ -463,27 +514,29 @@ def update_role(request):
     return response
 
 
-def get_role(request):
+def get_role_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
-                response["role"] = Role.query.get(data["role_key"])
+                role = Role.query.get(data["role_key"])
+                response["role"] = { "role_key": role.role_key, "role_name": role.role_name }
                 response["status"] = SUCCESS_STATUS
                 response["message"] = SUCCESS_MESSAGE_DEFAULT
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
+    return response
 
 
-def list_roles(request):
+def list_roles_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -497,10 +550,10 @@ def list_roles(request):
                 response["message"] = str(e)
 
 
-def delete_role(request):
+def delete_role_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -513,20 +566,21 @@ def delete_role(request):
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
+    return response
 
 
 # Permission API
-def create_permission(request):
+def create_permission_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
-                permission = request["permission"]
-                db.session.add(Permission(uuid.uuid4(), permission.ref_role_key, permission.permission_name))
+                permission = data["permission"]
+                db.session.add(Permission(uuid.uuid4(), permission["ref_role_key"], permission["permission_name"]))
                 db.session.commit()
                 response["status"] = CREATE_SUCCESS_STATUS
                 response["message"] = CREATE_SUCCESS_MESSAGE
@@ -536,17 +590,17 @@ def create_permission(request):
     return response
 
 
-def update_permission(request):
+def update_permission_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
                 update = data["permission"]
-                permission = Permission.query.get(update.permission_key)
+                permission = Permission.query.get(update["permission_key"])
                 permission = update
                 db.session.commit()
                 response["status"] = SUCCESS_STATUS
@@ -557,10 +611,10 @@ def update_permission(request):
     return response
 
 
-def get_permission(request):
+def get_permission_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -574,10 +628,10 @@ def get_permission(request):
                 response["message"] = str(e)
 
 
-def list_permissions(request):
+def list_permissions_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -591,10 +645,10 @@ def list_permissions(request):
                 response["message"] = str(e)
 
 
-def delete_permission(request):
+def delete_permission_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -607,13 +661,14 @@ def delete_permission(request):
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
+    return response
 
 
 # Category API
-def create_category(request):
+def create_category_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -630,10 +685,10 @@ def create_category(request):
     return response
 
 
-def update_category(request):
+def update_category_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if(data == None):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -651,10 +706,10 @@ def update_category(request):
     return response
 
 
-def get_category(request):
+def get_category_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -668,10 +723,10 @@ def get_category(request):
                 response["message"] = str(e)
 
 
-def list_categories(request):
+def list_categories_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -685,10 +740,10 @@ def list_categories(request):
                 response["message"] = str(e)
 
 
-def delete_category(request):
+def delete_category_api(request):
     response = {}
-    if request.is_json():
-        data = request.json
+    if request.is_json:
+        data = request.get_json()
         if data == None:
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
@@ -704,166 +759,172 @@ def delete_category(request):
 
 
 # routes
-@app.route("/api/AnalyzeUrl", methods=["POST"])
+@app.route("/api/CreateOrAnalyzeUrl", methods=["POST"])
 @cross_origin()
 def analyze_url():
-    return create_and_or_analyze_url(flask.request)
+    return create_and_or_analyze_url_api(flask.request)
 
 
 @app.route("/api/GetUrl", methods=["POST"])
 @cross_origin()
 def get_url():
-    return flask.jsonify(get_url(flask.request))
+    return flask.jsonify(get_url_api(flask.request))
 
 
 @app.route("/api/UpdateUrl", methods=["POST"])
 @cross_origin()
 def update_url():
-    return flask.jsonify(update_url(flask.request))
+    return flask.jsonify(update_url_api(flask.request))
 
 
 @app.route("/api/RegisterUser", methods=["POST"])
 @cross_origin()
 def register_user():
-    return flask.jsonify(register_user(flask.request))
+    return flask.jsonify(register_user_api(flask.request))
 
 
 @app.route("/api/LoginUser", methods=["POST"])
 @cross_origin()
 def login_user():
-    return flask.jsonify(login_user(flask.request))
+    return flask.jsonify(login_user_api(flask.request))
+
+
+@app.route("/api/LogoutUser", methods=["POST"])
+@cross_origin()
+def logout_user():
+    return flask.jsonify(logout_user_api(flask.request))
 
 
 @app.route("/api/UpdateUser", methods=["POST"])
 @cross_origin()
 def update_user():
-    return flask.jsonify(update_user(flask.request))
+    return flask.jsonify(update_user_api(flask.request))
 
 
 @app.route("/api/DeleteUser", methods=["POST"])
 @cross_origin()
 def delete_user():
-    return flask.jsonify(delete_user(flask.request))
+    return flask.jsonify(delete_user_api(flask.request))
 
 
 @app.route("/api/CreatePassword", methods=["POST"])
 @cross_origin()
 def create_password():
-    return flask.jsonify(create_password(flask.request))
+    return flask.jsonify(create_password_api(flask.request))
 
 
 @app.route("/api/UpdatePassword", methods=["POST"])
 @cross_origin()
 def update_password():
-    return flask.jsonify(update_password(flask.request))
+    return flask.jsonify(update_password_api(flask.request))
 
 
 @app.route("/api/ListPasswords", methods=["POST"])
 @cross_origin()
 def list_passwords():
-    return flask.jsonify(list_passwords(flask.request))
+    return flask.jsonify(list_passwords_api(flask.request))
 
 
 @app.route("/api/DeletePassword", methods=["POST"])
 @cross_origin()
 def delete_password():
-    return flask.jsonify(delete_password(flask.request))
+    return flask.jsonify(delete_password_api(flask.request))
 
 
 @app.route("/api/GetPassword", methods=["POST"])
 @cross_origin()
 def get_password():
-    return flask.jsonify(get_password(flask.request))
+    return flask.jsonify(get_password_api(flask.request))
 
 
 @app.route("/api/CreateRole", methods=["POST"])
 @cross_origin()
 def create_role():
-    return flask.jsonify(create_role(flask.request))
+    return flask.jsonify(create_role_api(flask.request))
 
 
 @app.route("/api/UpdateRole", methods=["POST"])
 @cross_origin()
 def update_role():
-    return flask.jsonify(update_role(flask.request))
+    return flask.jsonify(update_role_api(flask.request))
 
 
 @app.route("/api/ListRoles", methods=["POST"])
 @cross_origin()
 def list_roles():
-    return flask.jsonify(list_roles(flask.request))
+    return flask.jsonify(list_roles_api(flask.request))
 
 
 @app.route("/api/DeleteRole", methods=["POST"])
 @cross_origin()
 def delete_role():
-    return flask.jsonify(delete_role(flask.request))
+    return flask.jsonify(delete_role_api(flask.request))
 
 
 @app.route("/api/GetRole", methods=["POST"])
 @cross_origin()
 def get_role():
-    return flask.jsonify(get_role(flask.request))
+    return flask.jsonify(get_role_api(flask.request))
 
 
 @app.route("/api/CreatePermission", methods=["POST"])
 @cross_origin()
 def create_permission():
-    return flask.jsonify(create_permission(flask.request))
+    return flask.jsonify(create_permission_api(flask.request))
 
 
 @app.route("/api/UpdatePermission", methods=["POST"])
 @cross_origin()
 def update_permission():
-    return flask.jsonify(update_permission(flask.request))
+    return flask.jsonify(update_permission_api(flask.request))
 
 
 @app.route("/api/ListPermissions", methods=["POST"])
 @cross_origin()
 def list_permissions():
-    return flask.jsonify(list_permissions(flask.request))
+    return flask.jsonify(list_permissions_api(flask.request))
 
 
 @app.route("/api/DeletePermission", methods=["POST"])
 @cross_origin()
 def delete_permission():
-    return flask.jsonify(delete_permission(flask.request))
+    return flask.jsonify(delete_permission_api(flask.request))
 
 
 @app.route("/api/GetPermission", methods=["POST"])
 @cross_origin()
 def get_permission():
-    return flask.jsonify(get_permission(flask.request))
+    return flask.jsonify(get_permission_api(flask.request))
 
 
 @app.route("/api/CreateCategory", methods=["POST"])
 @cross_origin()
 def create_category():
-    return flask.jsonify(create_category(flask.request))
+    return flask.jsonify(create_category_api(flask.request))
 
 
 @app.route("/api/UpdateCategory", methods=["POST"])
 @cross_origin()
 def update_category():
-    return flask.jsonify(update_category(flask.request))
+    return flask.jsonify(update_category_api(flask.request))
 
 
 @app.route("/api/ListCategories", methods=["POST"])
 @cross_origin()
 def list_categories():
-    return flask.jsonify(list_categories(flask.request))
+    return flask.jsonify(list_categories_api(flask.request))
 
 
 @app.route("/api/DeleteCategory", methods=["POST"])
 @cross_origin()
 def delete_category():
-    return flask.jsonify(delete_category(flask.request))
+    return flask.jsonify(delete_category_api(flask.request))
 
 
 @app.route("/api/GetCategory", methods=["POST"])
 @cross_origin()
 def get_category():
-    return flask.jsonify(get_category(flask.request))
+    return flask.jsonify(get_category_api(flask.request))
 
 
 app.run(host='0.0.0.0')
