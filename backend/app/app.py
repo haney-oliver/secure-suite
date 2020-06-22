@@ -57,7 +57,7 @@ class Category(db.Model):
     __tablename__ = 'category'
     category_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'))
-    category_name = db.Column(db.String(10), nullable=False, unique=True)
+    category_name = db.Column(db.String(255), nullable=False, unique=True)
     category_description = db.Column(db.Text, nullable=False)
 
     def __init__(self, category_key, ref_user_key, category_name, category_description):
@@ -138,7 +138,7 @@ NOT_FOUND_ERROR_MESSAGE = "Resource not found"
 def validate_user_and_session(user_key, session_key):
     user = User.query.get(user_key)
     session = Session.query.get(session_key)
-    if (user.user_key == session.ref_user_key && session.locked_out == False):
+    if user.user_key == session.ref_user_key and session.locked_out == False:
         return True
     else:
         return False
@@ -153,34 +153,37 @@ def create_and_or_analyze_url_api(request):
             response["status"] = SERVER_ERROR_STATUS
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
-            url = data["url"]
-            check = Url.query.filter_by(url_string=url).first()
-            print(check)
-            if (check == None):
-                tokens = [tokenize(url)]
-                seq = tokenizer.texts_to_sequences(np.array(tokens))
-                padded_seq = np.array(pad_sequences(
-                    seq, padding='post', maxlen=60))
-                prediction = model.predict(padded_seq)
-                if (prediction < 0.5):
-                    response["url_good"] = True
-                    response["status"] = SUCCESS_STATUS
-                    response["message"] = SUCCESS_MESSAGE_DEFAULT
-                elif (prediction > 0.5):
-                    response["url_good"] = False
-                    response["status"] = SUCCESS_STATUS
-                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+            if validate_user_and_session(data["user_key"], data["session_key"]):
+                url = data["url"]
+                check = Url.query.filter_by(url_string=url).first()
+                if (check == None):
+                    tokens = [tokenize(url)]
+                    seq = tokenizer.texts_to_sequences(np.array(tokens))
+                    padded_seq = np.array(pad_sequences(
+                        seq, padding='post', maxlen=60))
+                    prediction = model.predict(padded_seq)
+                    if (prediction < 0.5):
+                        response["url_good"] = True
+                        response["status"] = SUCCESS_STATUS
+                        response["message"] = SUCCESS_MESSAGE_DEFAULT
+                    elif (prediction > 0.5):
+                        response["url_good"] = False
+                        response["status"] = SUCCESS_STATUS
+                        response["message"] = SUCCESS_MESSAGE_DEFAULT
+                    else:
+                        response["status"] = SUCCESS_STATUS
+                        response["url_good"] = False
+                        response["message"] = "Error: Prediction not clear"
+                    create = Url(uuid.uuid4(), data["user_key"], url, tokens, seq, response["url_good"])
+                    db.session.add(create)
+                    db.session.commit()
                 else:
-                    response["status"] = SUCCESS_STATUS
-                    response["url_good"] = False
-                    response["message"] = "Error: Prediction not clear"
-                create = Url(uuid.uuid4(), data["ref_user_key"], url, tokens, seq, response["url_good"])
-                db.session.add(create)
-                db.session.commit()
+                     response["status"] = SUCCESS_STATUS
+                     response["url_good"] = check.url_good
+                     response["message"] = "URL already visited by user"
             else:
-                 response["status"] = SUCCESS_STATUS
-                 response["url_good"] = check.url_good
-                 response["message"] = "URL already visited by user"
+                response["status"] = UNAUTHORIZED_ERROR_STATUS
+                response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -188,17 +191,21 @@ def get_url_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["url"] = Url.query.get(data["url_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response["url"] = Url.query.get(data["url_key"])
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -206,20 +213,24 @@ def update_url_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                url = Url.query.get(data["url_key"])
-                url.url_good = request["url_good"]
-                db.session.commit()
-                response["url"] = url
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    url = Url.query.get(data["url_key"])
+                    url.url_good = data["url_good"]
+                    db.session.commit()
+                    response["url"] = url
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -227,18 +238,22 @@ def list_urls_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["urls"] = Url.query.filter_by(
-                    ref_user_key=data["ref_user_key"]).all()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response["urls"] = Url.query.filter_by(
+                        ref_user_key=data["ref_user_key"]).all()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -289,7 +304,6 @@ def login_user_api(request):
                         return response
                     response["user"] = {
                         "user_key": user.user_key,
-                        "ref_role_key": user.ref_role_key,
                         "user_name": user.user_name,
                         "user_email": user.user_email
                     }
@@ -318,21 +332,25 @@ def logout_user_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                user = User.query.get(data["user_key"])
-                session = Session.query.get(data["session_key"])
-                if session.ref_user_key == user.user_key:
-                    db.session.delete(session)
-                    db.session.commit()
-                    response["status"] = SUCCESS_STATUS
-                    response["message"] = "User logged out."
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    user = User.query.get(data["user_key"])
+                    session = Session.query.get(data["session_key"])
+                    if session.ref_user_key == user.user_key:
+                        db.session.delete(session)
+                        db.session.commit()
+                        response["status"] = SUCCESS_STATUS
+                        response["message"] = "User logged out."
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -340,19 +358,23 @@ def update_user_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                user = User.query.get(data["user_key"])
-                user = data["user"]
-                response["user"] = user
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    user = User.query.get(data["user_key"])
+                    user = data["user"]
+                    response["user"] = user
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -360,19 +382,23 @@ def delete_user_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                user = User.query.get(data["user_key"])
-                db.session.delete(user)
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    user = User.query.get(data["user_key"])
+                    db.session.delete(user)
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -381,19 +407,23 @@ def create_password_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                password = data["password"]
-                db.session.add(Password(uuid.uuid4(), password.ref_user_key, password.ref_category_key, password.password_content, password.password_username, password.password_url))
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    password = data["password"]
+                    db.session.add(Password(uuid.uuid4(), password["ref_user_key"], password["ref_category_key"], password["password_content"], password["password_username"], password["password_url"]))
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -401,17 +431,21 @@ def get_password_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response[""] = Url.query.get(data["url_key"])
-                response["status"] = CREATE_SUCCESS_STATUS
-                response["message"] = CREATE_SUCCESS_MESSAGE
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response[""] = Url.query.get(data["url_key"])
+                    response["status"] = CREATE_SUCCESS_STATUS
+                    response["message"] = CREATE_SUCCESS_MESSAGE
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -419,20 +453,24 @@ def update_password_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                update = data["password"]
-                password = Password.query.get(data["password_key"])
-                password = update
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    update = data["password"]
+                    password = Password.query.get(data["password_key"])
+                    password = update
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -440,17 +478,21 @@ def list_passwords_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["passwords"] = Password.query.filter_by(ref_user_key=data["ref_user_key"]).all()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response["passwords"] = Password.query.filter_by(ref_user_key=data["ref_user_key"]).all()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -458,209 +500,23 @@ def delete_password_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if (data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                password = Password.query.get(data["password_key"])
-                db.session.delete(password)
-                db.session.commit
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-# Role API
-def create_role_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    password = Password.query.get(data["password_key"])
+                    db.session.delete(password)
+                    db.session.commit
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
         else:
-            try:
-                db.session.add(Role(uuid.uuid4(), data["role"]["role_name"]))
-                db.session.commit()
-                response["status"] = CREATE_SUCCESS_STATUS
-                response["message"] = CREATE_SUCCESS_MESSAGE
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-def update_role_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                role = Role.query.get(data["role"]["role_key"])
-                role.role_name = data["role"]["role_name"]
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-def get_role_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                role = Role.query.get(data["role_key"])
-                response["role"] = { "role_key": role.role_key, "role_name": role.role_name }
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-def list_roles_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["roles"] = Role.query.filter_by(ref_user_key=data["ref_user_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-
-
-def delete_role_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                db.session.delete(Role.query.get(data["role_key"]))
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-# Permission API
-def create_permission_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                permission = data["permission"]
-                db.session.add(Permission(uuid.uuid4(), permission["ref_role_key"], permission["permission_name"]))
-                db.session.commit()
-                response["status"] = CREATE_SUCCESS_STATUS
-                response["message"] = CREATE_SUCCESS_MESSAGE
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-def update_permission_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                update = data["permission"]
-                permission = Permission.query.get(update["permission_key"])
-                permission = update
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-    return response
-
-
-def get_permission_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["permission"] = Permission.query.get(data["permission_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-
-
-def list_permissions_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["permissions"] = Permission.query.filter_by(ref_role_key=data["ref_role_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
-
-
-def delete_permission_api(request):
-    response = {}
-    if request.is_json:
-        data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                db.session.delete(Permission.query.get(data["permission_key"]))
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
-                response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -669,19 +525,23 @@ def create_category_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                category = request["role"]
-                db.session.add(Category(uuid.uuid4(), category.ref_user_key, category.category_name, category.category_decription))
-                db.session.commit()
-                response["status"] = CREATE_SUCCESS_STATUS
-                response["message"] = CREATE_SUCCESS_MESSAGE
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if(data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    category = data["category"]
+                    db.session.add(Category(uuid.uuid4(), category["ref_user_key"], category["category_name"], category["category_description"]))
+                    db.session.commit()
+                    response["status"] = CREATE_SUCCESS_STATUS
+                    response["message"] = CREATE_SUCCESS_MESSAGE
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -689,20 +549,24 @@ def update_category_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if(data == None):
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                update = data["category"]
-                category = Category.query.get(update.category_key)
-                category = update
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if(data == None):
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    update = data["category"]
+                    category = Category.query.get(update.category_key)
+                    category = update
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
     return response
 
 
@@ -710,52 +574,67 @@ def get_category_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["category"] = Category.query.get(data["category_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if data == None:
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response["category"] = Category.query.get(data["category_key"])
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
+    return response
 
 
 def list_categories_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                response["categories"] = Category.query.filter_by(ref_user_key=data["ref_user_key"])
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if data == None:
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    response["categories"] = Category.query.filter_by(ref_user_key=data["ref_user_key"])
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
+    return response
 
 
 def delete_category_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        if data == None:
-            response["status"] = SERVER_ERROR_STATUS
-            response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
-        else:
-            try:
-                db.session.delete(Category.query.get(data["category_key"]))
-                db.session.commit()
-                response["status"] = SUCCESS_STATUS
-                response["message"] = SUCCESS_MESSAGE_DEFAULT
-            except Exception as e:
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if data == None:
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    db.session.delete(Category.query.get(data["category_key"]))
+                    db.session.commit()
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
+    return response
 
 
 # routes
@@ -835,66 +714,6 @@ def delete_password():
 @cross_origin()
 def get_password():
     return flask.jsonify(get_password_api(flask.request))
-
-
-@app.route("/api/CreateRole", methods=["POST"])
-@cross_origin()
-def create_role():
-    return flask.jsonify(create_role_api(flask.request))
-
-
-@app.route("/api/UpdateRole", methods=["POST"])
-@cross_origin()
-def update_role():
-    return flask.jsonify(update_role_api(flask.request))
-
-
-@app.route("/api/ListRoles", methods=["POST"])
-@cross_origin()
-def list_roles():
-    return flask.jsonify(list_roles_api(flask.request))
-
-
-@app.route("/api/DeleteRole", methods=["POST"])
-@cross_origin()
-def delete_role():
-    return flask.jsonify(delete_role_api(flask.request))
-
-
-@app.route("/api/GetRole", methods=["POST"])
-@cross_origin()
-def get_role():
-    return flask.jsonify(get_role_api(flask.request))
-
-
-@app.route("/api/CreatePermission", methods=["POST"])
-@cross_origin()
-def create_permission():
-    return flask.jsonify(create_permission_api(flask.request))
-
-
-@app.route("/api/UpdatePermission", methods=["POST"])
-@cross_origin()
-def update_permission():
-    return flask.jsonify(update_permission_api(flask.request))
-
-
-@app.route("/api/ListPermissions", methods=["POST"])
-@cross_origin()
-def list_permissions():
-    return flask.jsonify(list_permissions_api(flask.request))
-
-
-@app.route("/api/DeletePermission", methods=["POST"])
-@cross_origin()
-def delete_permission():
-    return flask.jsonify(delete_permission_api(flask.request))
-
-
-@app.route("/api/GetPermission", methods=["POST"])
-@cross_origin()
-def get_permission():
-    return flask.jsonify(get_permission_api(flask.request))
 
 
 @app.route("/api/CreateCategory", methods=["POST"])
