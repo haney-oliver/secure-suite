@@ -18,12 +18,11 @@
 </template>
 
 <script>
-import firebaseApp from "@/main";
 import Navbar from "@/components/Navbar";
 import axios from "axios";
-import { BACKEND_URI } from "../main";
-import store from "../store";
-import router from "../../router/index";
+import { BACKEND_URI } from "@/main";
+import store from "@/store";
+import router from "@/router/index";
 
 export default {
   name: "LoginPage",

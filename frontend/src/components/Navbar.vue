@@ -27,7 +27,6 @@
 </template>
 
 <script>
-import firebaseApp from "@/main";
 import { mapGetters } from "vuex";
 import { EventBus } from "@/event-bus";
 import axios from "axios";
@@ -71,4 +70,4 @@ export default {
 </script>
 
 <style scoped>
-</style>f
+</style>
