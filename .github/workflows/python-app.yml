@@ -4,11 +4,8 @@
 name: flask backend
 
 on:
-  push:
-    branches: [ master ]
-    paths: [ backend/* ]
   pull_request:
-    branches: [ * ]
+    branches: [ master ]
     paths: [ backend/* ]
 
 jobs:
