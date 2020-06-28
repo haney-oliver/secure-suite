@@ -6,7 +6,7 @@ name: flask backend
 on:
   pull_request:
     branches: [ master ]
-    paths: [ backend/* ]
+    paths: [ backend/*, backend/app/* ]
 
 jobs:
   build:
