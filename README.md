@@ -3,7 +3,7 @@
 
 Secure Suite. An open source software package that uses machine learning to increase the user's general internet security.
 
-Secure Suite offers a password manager that allows people on the same network to share secrets with each other via role/permission authorization. It also processes browser traffic to mitigate the risk of navigating to a malicious URL that could steal sensitive user data or scrape cookies/credentials.
+Secure Suite offers a secure password manager. It also processes browser traffic to mitigate the risk of navigating to a URL that hosts malicious web services.
 
 # Backend
 The Secure Suite Backend is composed of `mal_url_net`, the machine learning model that processes browser traffic, and a flask server to serve the model and endpoints for app interaction.
@@ -27,17 +27,17 @@ flask run
 npm install
 ```
 
-### Compiles and hot-reloads for development
+Compile and hot-reload for development
 ```
 npm run serve
 ```
 
-### Compiles and minifies for production
+Compile and minify for production
 ```
 npm run build
 ```
 
-### Lints and fixes files
+Lint and fix files
 ```
 npm run lint
 ```
