@@ -12,7 +12,7 @@ The Secure Suite Backend is composed of `mal_url_net`, the machine learning mode
 ```
 git clone https://github.com/haney-oliver/secure-suite.git
 cd secure-suite/backend/app/
-export FLASK_SERVER=${PATH_TO_SECURE_SUITE}/secure-suite/backend/app/app.y
+source development.env
 ```
 
 Now, in the flask app route directory, you can simply run
