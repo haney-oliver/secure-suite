@@ -11,6 +11,7 @@ import uuid
 import flask
 import os
 import hashlib
+import json
 
 
 app = flask.Flask(__name__)
@@ -174,17 +175,18 @@ def create_and_or_analyze_url_api(request):
                         response["status"] = SUCCESS_STATUS
                         response["url_good"] = False
                         response["message"] = "Error: Prediction not clear"
-                    create = Url(uuid.uuid4(), data["user_key"], url, tokens, seq, response["url_good"])
+                    create = Url(uuid.uuid4(), data["user_key"], url, tokens[0], str(seq[0][0:]), response["url_good"])
                     db.session.add(create)
                     db.session.commit()
                 else:
                      response["status"] = SUCCESS_STATUS
                      response["url_good"] = check.url_good
                      response["message"] = "URL already visited by user"
+
             else:
                 response["status"] = UNAUTHORIZED_ERROR_STATUS
                 response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def get_url_api(request):
@@ -197,7 +199,12 @@ def get_url_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response["url"] = Url.query.get(data["url_key"])
+                    url = Url.query.get(data["url_key"])
+                    response["url"] = {
+                        "url_key": url.url_key,
+                        "url_string": url.url_string,
+                        "url_good": url.url_good
+                    }
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -206,7 +213,7 @@ def get_url_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def update_url_api(request):
@@ -219,19 +226,23 @@ def update_url_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    url = Url.query.get(data["url_key"])
-                    url.url_good = data["url_good"]
+                    url = Url.query.get(data["url"]["url_key"])
+                    url.url_good = data["url"]["url_good"]
                     db.session.commit()
-                    response["url"] = url
+                    response["url"] = {
+                        "url_key": url.url_key,
+                        "url_string": url.url_string,
+                        "url_good": url.url_good
+                    }
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
                     response["status"] = SERVER_ERROR_STATUS
-                    response["message"] = str(e)
+                    print(e)
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def list_urls_api(request):
@@ -254,7 +265,7 @@ def list_urls_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 # User API
@@ -283,7 +294,7 @@ def register_user_api(request):
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def login_user_api(request):
@@ -296,36 +307,36 @@ def login_user_api(request):
         else:
             try:
                 user = User.query.filter_by(user_name=data["user_name"]).first()
-                if (user.user_password == hashlib.sha512(("user_password"+ user.user_salt).encode('utf-8')).hexdigest()):
+                if (user.user_password == hashlib.sha512((data["user_password"]+ user.user_salt).encode('utf-8')).hexdigest()):
                     check_session = Session.query.filter_by(ref_user_key=user.user_key).first()
-                    if check_session != None:
+                    if check_session == None:
+                        response["user"] = {
+                            "user_key": user.user_key,
+                            "user_name": user.user_name,
+                            "user_email": user.user_email
+                        }
+                        session = Session(uuid.uuid4(), user.user_key)
+                        db.session.add(session)
+                        db.session.commit()
+                        response["session"] = {
+                            "session_key": session.session_key,
+                            "ref_user_key": session.ref_user_key,
+                            "time_create": str(session.time_create),
+                            "time_update": str(session.time_update),
+                            "locked_out": session.locked_out
+                        }
+                        response["status"] = SUCCESS_STATUS
+                        response["message"] = SUCCESS_MESSAGE_DEFAULT
+                    else:
                         response["status"] = UNAUTHORIZED_ERROR_STATUS
                         response["message"] = "User already logged in."
-                        return response
-                    response["user"] = {
-                        "user_key": user.user_key,
-                        "user_name": user.user_name,
-                        "user_email": user.user_email
-                    }
-                    session = Session(uuid.uuid4(), user.user_key)
-                    db.session.add(session)
-                    db.session.commit()
-                    response["session"] = {
-                        "session_key": session.session_key,
-                        "ref_user_key": session.ref_user_key,
-                        "time_create": session.time_create,
-                        "time_update": session.time_update,
-                        "locked_out": session.locked_out
-                    }
-                    response["status"] = SUCCESS_STATUS
-                    response["message"] = SUCCESS_MESSAGE_DEFAULT
                 else:
-                    response["status"] = SUCCESS_STATUS
+                    response["status"] = UNAUTHORIZED_ERROR_STATUS
                     response["message"] = "Invalid credentials. Try again."
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def logout_user_api(request):
@@ -351,7 +362,7 @@ def logout_user_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def update_user_api(request):
@@ -375,7 +386,7 @@ def update_user_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def delete_user_api(request):
@@ -399,7 +410,7 @@ def delete_user_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 # Password API
@@ -424,7 +435,7 @@ def create_password_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def get_password_api(request):
@@ -446,7 +457,7 @@ def get_password_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def update_password_api(request):
@@ -471,7 +482,7 @@ def update_password_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def list_passwords_api(request):
@@ -493,7 +504,7 @@ def list_passwords_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def delete_password_api(request):
@@ -517,7 +528,7 @@ def delete_password_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 # Category API
@@ -542,7 +553,7 @@ def create_category_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def update_category_api(request):
@@ -567,7 +578,7 @@ def update_category_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def get_category_api(request):
@@ -589,7 +600,7 @@ def get_category_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def list_categories_api(request):
@@ -611,7 +622,7 @@ def list_categories_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 def delete_category_api(request):
@@ -634,7 +645,7 @@ def delete_category_api(request):
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
-    return response
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
 # routes
@@ -647,103 +658,103 @@ def analyze_url():
 @app.route("/api/GetUrl", methods=["POST"])
 @cross_origin()
 def get_url():
-    return flask.jsonify(get_url_api(flask.request))
+    return get_url_api(flask.request)
 
 
 @app.route("/api/UpdateUrl", methods=["POST"])
 @cross_origin()
 def update_url():
-    return flask.jsonify(update_url_api(flask.request))
+    return update_url_api(flask.request)
 
 
 @app.route("/api/RegisterUser", methods=["POST"])
 @cross_origin()
 def register_user():
-    return flask.jsonify(register_user_api(flask.request))
+    return register_user_api(flask.request)
 
 
 @app.route("/api/LoginUser", methods=["POST"])
 @cross_origin()
 def login_user():
-    return flask.jsonify(login_user_api(flask.request))
+    return login_user_api(flask.request)
 
 
 @app.route("/api/LogoutUser", methods=["POST"])
 @cross_origin()
 def logout_user():
-    return flask.jsonify(logout_user_api(flask.request))
+    return logout_user_api(flask.request)
 
 
 @app.route("/api/UpdateUser", methods=["POST"])
 @cross_origin()
 def update_user():
-    return flask.jsonify(update_user_api(flask.request))
+    return update_user_api(flask.request)
 
 
 @app.route("/api/DeleteUser", methods=["POST"])
 @cross_origin()
 def delete_user():
-    return flask.jsonify(delete_user_api(flask.request))
+    return delete_user_api(flask.request)
 
 
 @app.route("/api/CreatePassword", methods=["POST"])
 @cross_origin()
 def create_password():
-    return flask.jsonify(create_password_api(flask.request))
+    return create_password_api(flask.request)
 
 
 @app.route("/api/UpdatePassword", methods=["POST"])
 @cross_origin()
 def update_password():
-    return flask.jsonify(update_password_api(flask.request))
+    return update_password_api(flask.request)
 
 
 @app.route("/api/ListPasswords", methods=["POST"])
 @cross_origin()
 def list_passwords():
-    return flask.jsonify(list_passwords_api(flask.request))
+    return list_passwords_api(flask.request)
 
 
 @app.route("/api/DeletePassword", methods=["POST"])
 @cross_origin()
 def delete_password():
-    return flask.jsonify(delete_password_api(flask.request))
+    return delete_password_api(flask.request)
 
 
 @app.route("/api/GetPassword", methods=["POST"])
 @cross_origin()
 def get_password():
-    return flask.jsonify(get_password_api(flask.request))
+    return get_password_api(flask.request)
 
 
 @app.route("/api/CreateCategory", methods=["POST"])
 @cross_origin()
 def create_category():
-    return flask.jsonify(create_category_api(flask.request))
+    return create_category_api(flask.request)
 
 
 @app.route("/api/UpdateCategory", methods=["POST"])
 @cross_origin()
 def update_category():
-    return flask.jsonify(update_category_api(flask.request))
+    return update_category_api(flask.request)
 
 
 @app.route("/api/ListCategories", methods=["POST"])
 @cross_origin()
 def list_categories():
-    return flask.jsonify(list_categories_api(flask.request))
+    return (list_categories_api(flask.request))
 
 
 @app.route("/api/DeleteCategory", methods=["POST"])
 @cross_origin()
 def delete_category():
-    return flask.jsonify(delete_category_api(flask.request))
+    return (delete_category_api(flask.request))
 
 
 @app.route("/api/GetCategory", methods=["POST"])
 @cross_origin()
 def get_category():
-    return flask.jsonify(get_category_api(flask.request))
+    return (get_category_api(flask.request))
 
 
 app.run(host='0.0.0.0')
