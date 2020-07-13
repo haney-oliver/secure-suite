@@ -1,5 +1,5 @@
 <template>
-  <div class="login-view">
+  <div class="register-view">
     <navbar />
     <div class="area">
       <ul class="circles">
@@ -16,13 +16,14 @@
       </ul>
     </div>
     <div class="container">
-      <div class="form" id="loginForm">
-        <h2 class="form-title">Login</h2>
+      <div class="form" id="registerForm">
+        <h2 class="form-title">Register</h2>
         <input class="input-field" type="text" v-model="username" placeholder="Username" />
+        <input class="input-field" type="email" v-model="userEmail" placeholder="Email" />
         <input class="input-field" type="password" v-model="userPassword" placeholder="Password" />
         <span class="buttons">
-          <button class="main-button" v-on:click="login" id="loginButton">
-            <span class="button-content">Login</span>
+          <button class="main-button" v-on:click="register" id="registerButton">
+            <span class="button-content">Register</span>
           </button>
         </span>
       </div>
@@ -34,47 +35,39 @@
 import Navbar from "@/components/Navbar";
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
-import store from "@/store";
 import router from "@/router/index";
 
 export default {
-  name: "LoginPage",
+  name: "RegisterView",
   components: {
     navbar: Navbar
   },
   data() {
     return {
       username: null,
-      userPassword: null
+      userPassword: null,
+      userEmail: null
     };
   },
   methods: {
-    login() {
-      if (
-        window.sessionStorage.vuex == null ||
-        window.sessionStorage.vuex.session.session_key == null ||
-        window.sessionStorage.vuex.session.user == null
-      ) {
-        axios
-          .post(BACKEND_URI + "/api/LoginUser", {
+    register() {
+      axios
+        .post(BACKEND_URI + "/api/RegisterUser", {
+          user: {
             user_name: this.username,
+            user_email: this.userEmail,
             user_password: this.userPassword
-          })
-          .then(response => {
-            var data = {
-              user: response.data.user,
-              session_key: response.data.session.session_key
-            };
-            store.dispatch("setUserAndSession", data);
-            router.replace("/dashboard");
-          })
-          .catch(error => console.log(error.message));
-      }
+          }
+        })
+        .then(() => {
+          router.replace("/login");
+        })
+        .catch(error => console.log(error.message));
     }
   }
 };
 </script>
 
 <style scoped lang="scss">
-@import "@/assets/scss/login-view.scss";
+@import "@/assets/scss/register-view.scss";
 </style>

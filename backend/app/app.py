@@ -137,12 +137,12 @@ NOT_FOUND_ERROR_MESSAGE = "Resource not found"
 
 # User auth
 def validate_user_and_session(user_key, session_key):
-    user = User.query.get(user_key)
-    session = Session.query.get(session_key)
-    if user.user_key == session.ref_user_key and session.locked_out == False:
-        return True
-    else:
-        return False
+    if user_key != None and session_key != None:
+        user = User.query.get(user_key)
+        session = Session.query.get(session_key)
+        if user.user_key == session.ref_user_key and session.locked_out == False:
+            return True
+    return False
 
 
 # Url API
@@ -335,7 +335,7 @@ def login_user_api(request):
                     response["message"] = "Invalid credentials. Try again."
             except Exception as e:
                 response["status"] = SERVER_ERROR_STATUS
-                response["message"] = str(e)
+                print(e)
     return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
@@ -343,6 +343,7 @@ def logout_user_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
+        print(data)
         if validate_user_and_session(data["user_key"], data["session_key"]):
             if (data == None):
                 response["status"] = SERVER_ERROR_STATUS

@@ -1,5 +1,6 @@
 <template>
   <div class="navbar">
+    <span class="title">SECURE SUITE</span>
     <ul class="options">
       <li>
         <router-link to="/">Home</router-link>
@@ -10,17 +11,17 @@
       <li @click="scrollTo('quickstart')">
         <a href="/#quickstart">Quickstart</a>
       </li>
-      <li v-show="user.loggedIn">
+      <li v-show="user">
         <router-link to="/dashboard">Dashboard</router-link>
       </li>
-      <li v-show="user.loggedIn">
+      <li v-show="user">
         <router-link to="/vault">Vault</router-link>
       </li>
-      <li v-show="user.loggedIn">
+      <li v-show="user">
         <router-link to="/preferences">Preferences</router-link>
       </li>
-      <li v-if="user.loggedIn">
-        <a @click.prevent="signOut">Logout</a>
+      <li v-if="user">
+        <a @click="logOut">Logout</a>
       </li>
     </ul>
   </div>
@@ -32,6 +33,7 @@ import { EventBus } from "@/event-bus";
 import axios from "axios";
 import { BACKEND_URI } from "../main";
 import store from "../store";
+import router from "../router";
 
 export default {
   name: "Navbar",
@@ -41,21 +43,18 @@ export default {
     };
   },
   methods: {
-    signOut() {
+    logOut() {
+      var session = JSON.parse(window.sessionStorage.vuex);
       axios
         .post(BACKEND_URI + "/api/LogoutUser", {
-          user_key: store.state.user_key
+          user_key: session.user.user_key,
+          session_key: session.session_key
         })
-        .then(store.dispatch("fetchUser", null))
+        .then(() => {
+          store.dispatch("removeUserAndSession");
+          router.replace("/login");
+        })
         .catch(response => console.log(response.message));
-    },
-    show() {
-      if (this.onBookTrailersPage) {
-        this.showList = true;
-      }
-    },
-    hide() {
-      this.showList = false;
     },
     scrollTo(ref) {
       EventBus.$emit("scroll-to", ref);
@@ -69,5 +68,6 @@ export default {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "@/assets/scss/navbar.scss";
 </style>

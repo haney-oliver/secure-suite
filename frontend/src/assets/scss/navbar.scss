@@ -1,0 +1,44 @@
+@use "base";
+
+.navbar {
+    height: 70px;
+    width: 100%;
+    background-color: rgb(75, 158, 253);
+    margin-bottom: 1em;
+    margin-top: 0;
+    z-index: 100;
+
+    .title {
+        display: block;
+        float: left;
+        margin: 1.35rem 0 0 1rem;
+        font-weight: 700;
+    }
+
+    .options {
+        float: right;
+        list-style-type: none;
+        display: block;
+        padding: 0 1rem 0 0;
+        margin-top: 1.25rem;
+
+
+        li {
+            display: inline-block;
+            font-size: 14px;
+
+            a {
+                cursor: pointer;
+                text-decoration: none;
+                color: rgb(255, 255, 255);
+                padding: 1rem;
+            }
+
+            a:hover {
+                color: rgb(75, 158, 253);
+                background-color: white;
+                transition: 0.5s;
+            }
+        }
+    }
+}
