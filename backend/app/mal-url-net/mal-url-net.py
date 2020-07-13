@@ -60,7 +60,7 @@ df2 = df2.apply(le.fit_transform)
 print("df1 shape: {}".format(df1.shape))
 print("df2 shape: {}".format(df2.shape))
 
-X = pd.concat([df1,df2], axis=1)
+X = pd.concat([df1, df2], axis=1)
 
 url_bad_count = 0
 url_good_count = 0
@@ -68,16 +68,18 @@ url_good_count = 0
 X_train, X_validate, y_train, y_validate = train_test_split(
     X, y, test_size=0.15, random_state=1000)
 
-X1_train = X_train.iloc[:,0:60]
-X1_validate = X_train.iloc[:,0:60]
+X1_train = X_train.iloc[:, 0:60]
+X1_validate = X_train.iloc[:, 0:60]
 
-X2_train = X_train[['url_domain', 'url_suffix', 'whois_registrar', 'whois_domain', 'whois_suffix', 'whois_org', 'url_domain_ip']]
-X2_validate = X_validate[['url_domain', 'url_subdomain', 'url_suffix', 'whois_registrar','whois_domain', 'whois_suffix', 'whois_org', 'url_domain_ip']]
+X2_train = X_train[['url', 'url_domain', 'url_suffix', 'whois_registrar',
+                    'whois_server_domain', 'whois_server_org', 'whois_org', 'url_domain_ip']]
+X2_validate = X_validate[['url', 'url_domain', 'url_suffix', 'whois_registrar',
+                          'whois_server_domain', 'whois_server_org', 'whois_org', 'url_domain_ip']]
 
 
 def generate_model(nidl):
     unstruct_input = Input(shape=(60,))
-    struct_input = Input(shape=(9,))
+    struct_input = Input(shape=(8,))
 
     # For ingesting non-strcutured url data
     m1 = Embedding(input_dim=vocab_size, output_dim=40,
@@ -118,15 +120,16 @@ def generate_model(nidl):
     return model
 
 
-def fit_data_to_model(nidl, ne, lr, bs, X_train, X_validate, y_train, y_validate, model):
+def fit_data_to_model(nidl, ne, lr, bs, X1_train, X1_validate, X2_train, X2_validate, y_train, y_validate, model):
     model.compile(loss='binary_crossentropy',
                   optimizer=adam(learning_rate=lr),
                   metrics=['accuracy'])
+    print("Model Compiled...")
     mc = ModelCheckpoint("smss-malurl-nidl{}-ne{}-lr{}-bs{}-weights-".format(nidl, ne, lr, bs)+"{epoch:08d}.h5",
                          monitor='val_accuracy', save_weights_only=True, period=1)
-
+    print(X1_train.shape, X2_train.shape)
     model_history = model.fit([X1_train, X2_train], y_train, batch_size=bs,
-                               epochs=ne, validation_data=(
+                              epochs=ne, validation_data=(
         [X1_validate, X2_validate], y_validate),
         verbose=1, callbacks=[mc])
 
@@ -161,9 +164,10 @@ def fit_data_to_model(nidl, ne, lr, bs, X_train, X_validate, y_train, y_validate
     plt.clf()
 
 
+# Perform training hyperparameter optimization
 for nidl in _nidl:
     for ne in _ne:
         for lr in _lr:
             for bs in _bs:
-                fit_data_to_model(nidl, ne, lr, bs, X_train, X_validate,
+                fit_data_to_model(nidl, ne, lr, bs, X1_train, X1_validate, X2_train, X2_validate,
                                   y_train, y_validate, generate_model(nidl))

@@ -2,8 +2,8 @@
 
 $font-stack: "Noto Sans", sans-serif;
 $primary-color: rgb(0, 0, 0);
-$button-color: rgb(100, 128, 255);
-$button-hover: rgb(79, 111, 255);
+$button-color: #6480ff;
+$button-hover: #4f6fff;
 
 body {
     font: 100% $font-stack;
@@ -18,6 +18,11 @@ body {
         font-size: xx-large;
     }
 
+    h1.large-stat {
+        font-size: 42px;
+        margin: 0.25rem 0 0.25rem 0;
+    }
+
     h2 {
         font-size: x-large;
     }
@@ -28,21 +33,21 @@ body {
     text-align: center;
 }
 
+.input-field {
+    width: 80%;
+    margin: 1rem auto 1rem auto;
+    height: 40px;
+    font-size: 18px;
+    padding: 0 0.5rem 0 0.5rem;
+    display: inline-block;
+    text-align: center;
+}
+
 .form {
     width: 50%;
-    margin: 2rem auto 0.5rem auto;
+    margin: 1rem auto 1rem auto;
     position: relative;
     z-index: 5;
-
-    .input-field {
-        width: 80%;
-        margin: 1rem auto 1rem auto;
-        height: 40px;
-        font-size: 18px;
-        padding: 0 0.5rem 0 0.5rem;
-        display: inline-block;
-        text-align: center;
-    }
 
     .buttons {
         width: 100%;

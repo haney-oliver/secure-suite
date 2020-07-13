@@ -4,3 +4,5 @@ flask_sqlalchemy
 flask_migrate
 keras
 tensorflow
+pandas
+matplotlib

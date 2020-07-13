@@ -7,9 +7,12 @@
 
 <script>
 export default {
-  props: [password]
+  props: {
+      password: Object
+  }
 };
 </script>
 
 <style scoped>
+@import "../../assets/scss/password.scss";
 </style>

@@ -4,6 +4,7 @@ import HomeView from '@/components/views/HomeView.vue'
 import LoginView from '@/components/views/LoginView.vue'
 import DashboardView from '@/components/views/DashboardView.vue'
 import RegisterView from '@/components/views/RegisterView.vue'
+import VaultView from '@/components/views/VaultView.vue'
 
 Vue.use(VueRouter)
 
@@ -27,6 +28,11 @@ const routes = [
         path: '/register',
         name: 'RegisterView',
         component: RegisterView
+    },
+    {
+        path: '/vault',
+        name: 'VaultView',
+        component: VaultView
     }
 ]
 

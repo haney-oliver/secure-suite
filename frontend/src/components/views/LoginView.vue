@@ -52,6 +52,7 @@ export default {
     login() {
       if (
         window.sessionStorage.vuex == null ||
+        window.sessionStorage.vuex.session == null ||
         window.sessionStorage.vuex.session.session_key == null ||
         window.sessionStorage.vuex.session.user == null
       ) {

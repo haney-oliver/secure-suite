@@ -1,0 +1,17 @@
+@use 'base';
+
+#searchField {
+    width: 70%;
+    margin: 1rem auto 1rem auto;
+    display: block;
+}
+
+.vault {
+    .container{
+        margin: 0;
+    }
+    .spacer {
+        height: 50px;
+        width: 100%;
+    }
+}

@@ -12,13 +12,17 @@ import flask
 import os
 import hashlib
 import json
-
+import secrets
+import string
+import requests
+import http.client
+import re
 
 app = flask.Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql://secure_suite:IWANTTOBEHACKED@localhost:3306/secure_suite')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.secret_key = os.environ.get('SECRET_KEY')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -27,7 +31,8 @@ migrate = Migrate(app, db)
 # model
 class User(db.Model):
     __tablename__ = 'user'
-    user_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    user_key = db.Column(db.String(36), primary_key=True,
+                         nullable=False, unique=True)
     user_name = db.Column(db.String(50), nullable=False, unique=True)
     user_email = db.Column(db.String(50), nullable=False, unique=True)
     user_password = db.Column(db.String(255), nullable=False)
@@ -40,12 +45,23 @@ class User(db.Model):
         self.user_password = user_password
         self.user_salt = user_salt
 
+    @property
+    def serialize(self):
+        return {
+            "user_key": self.user_key,
+            "user_name": self.user_name,
+            "user_email": self.user_email
+        }
+
 
 class Session(db.Model):
     __tablename__ = 'session'
-    session_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
-    ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'), unique=True)
-    time_create = db.Column(db.DateTime(), nullable=False, default=datetime.utcnow())
+    session_key = db.Column(
+        db.String(36), primary_key=True, nullable=False, unique=True)
+    ref_user_key = db.Column(
+        db.String(36), db.ForeignKey('user.user_key'), unique=True)
+    time_create = db.Column(db.DateTime(), nullable=False,
+                            default=datetime.utcnow())
     time_update = db.Column(db.DateTime())
     locked_out = db.Column(db.Boolean(), default=False, nullable=False)
 
@@ -53,12 +69,20 @@ class Session(db.Model):
         self.session_key = session_key
         self.ref_user_key = ref_user_key
 
+    @property
+    def serialize(self):
+        return {
+            "session_key": self.session_key,
+            "ref_user_key": self.ref_user_key
+        }
+
 
 class Category(db.Model):
     __tablename__ = 'category'
-    category_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    category_key = db.Column(
+        db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'))
-    category_name = db.Column(db.String(255), nullable=False, unique=True)
+    category_name = db.Column(db.String(255), nullable=False)
     category_description = db.Column(db.Text, nullable=False)
 
     def __init__(self, category_key, ref_user_key, category_name, category_description):
@@ -67,12 +91,21 @@ class Category(db.Model):
         self.category_name = category_name
         self.category_description = category_description
 
+    @property
+    def serialize(self):
+        return {
+            "category_key": self.category_key,
+            "category_name": self.category_name,
+            "category_description": self.category_description
+        }
+
 
 class Url(db.Model):
     __tablename__ = 'url'
-    url_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    url_key = db.Column(db.String(36), primary_key=True,
+                        nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey('user.user_key'))
-    url_string = db.Column(db.String(36), nullable=False, unique=True)
+    url_string = db.Column(db.Text, nullable=False)
     url_tokens = db.Column(db.Text, nullable=False)
     url_sequence = db.Column(db.Text, nullable=False)
     url_good = db.Column(db.Boolean, nullable=False)
@@ -85,10 +118,19 @@ class Url(db.Model):
         self.url_sequence = url_sequence
         self.url_good = url_good
 
+    @property
+    def serialize(self):
+        return {
+            "url_key": self.url_key,
+            "url_string": self.url_string,
+            "url_good": self.url_good
+        }
+
 
 class Password(db.Model):
     __tablename__ = 'password'
-    password_key = db.Column(db.String(36), primary_key=True, nullable=False, unique=True)
+    password_key = db.Column(
+        db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(db.String(36), db.ForeignKey(
         'user.user_key'), nullable=False)
     ref_category_key = db.Column(
@@ -104,6 +146,15 @@ class Password(db.Model):
         self.password_content = password_content
         self.password_username = password_username
         self.password_url = password_url
+
+    @property
+    def serialize(self):
+        return {
+            "password_key": self.password_key,
+            "password_username": self.password_username,
+            "password_url": self.password_url,
+            "password_content": self.password_content
+        }
 
 
 # API
@@ -145,7 +196,90 @@ def validate_user_and_session(user_key, session_key):
     return False
 
 
+# Helpers
+def calculate_url_analytics(urls):
+    good_urls = []
+    bad_urls = []
+    for url in urls:
+        if url.url_good:
+            good_urls.append(url)
+        else:
+            bad_urls.append(url)
+    return {
+        "good_urls": [url.serialize for url in good_urls],
+        "mal_urls": [url.serialize for url in bad_urls],
+        "number_good_urls": len(good_urls),
+        "number_mal_urls": len(bad_urls),
+        "total_urls_visited": len(urls)
+    }
+
+
+def get_url_analysis(url, user_key):
+    check = Url.query.filter_by(
+        ref_user_key=user_key).filter_by(url_string=url).first()
+    response = {}
+    if (check == None):
+        tokens = [tokenize(url)]
+        seq = tokenizer.texts_to_sequences(np.array(tokens))
+        padded_seq = np.array(pad_sequences(
+            seq, padding='post', maxlen=60))
+        prediction = model.predict(padded_seq)
+        if (prediction < 0.5):
+            response["url_good"] = True
+            response["status"] = SUCCESS_STATUS
+            response["message"] = SUCCESS_MESSAGE_DEFAULT
+        elif (prediction > 0.5):
+            response["url_good"] = False
+            response["status"] = SUCCESS_STATUS
+            response["message"] = SUCCESS_MESSAGE_DEFAULT
+        else:
+            response["status"] = SUCCESS_STATUS
+            response["url_good"] = False
+            response["message"] = "Error: Prediction not clear"
+        create = Url(uuid.uuid4(), user_key, url, tokens[0], str(
+            seq[0][0:]), response["url_good"])
+        db.session.add(create)
+        db.session.commit()
+    else:
+        response["status"] = SUCCESS_STATUS
+        response["url_good"] = check.url_good
+        response["message"] = "URL already visited by user"
+    return response
+
+
 # Url API
+def expand_shortened_url_api(request):
+    response = {}
+    if request.is_json:
+        data = request.get_json()
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
+                response["status"] = SERVER_ERROR_STATUS
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    shortened_url = re.sub(
+                        r'https?://', '', data["shortened_url"])
+                    domain, path = shortened_url.split('/')
+                    conn = http.client.HTTPConnection(domain)
+                    conn.request('HEAD', '/'+path)
+                    resp = conn.getresponse()
+                    response["expanded_url"] = requests.get(
+                        resp.getheader('location'), allow_redirects=True).url
+                    analysis = get_url_analysis(
+                        response["expanded_url"], data["user_key"])
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                    response["url_analysis"] = analysis
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
+
+
 def create_and_or_analyze_url_api(request):
     response = {}
     if request.is_json:
@@ -156,33 +290,7 @@ def create_and_or_analyze_url_api(request):
         else:
             if validate_user_and_session(data["user_key"], data["session_key"]):
                 url = data["url"]
-                check = Url.query.filter_by(url_string=url).first()
-                if (check == None):
-                    tokens = [tokenize(url)]
-                    seq = tokenizer.texts_to_sequences(np.array(tokens))
-                    padded_seq = np.array(pad_sequences(
-                        seq, padding='post', maxlen=60))
-                    prediction = model.predict(padded_seq)
-                    if (prediction < 0.5):
-                        response["url_good"] = True
-                        response["status"] = SUCCESS_STATUS
-                        response["message"] = SUCCESS_MESSAGE_DEFAULT
-                    elif (prediction > 0.5):
-                        response["url_good"] = False
-                        response["status"] = SUCCESS_STATUS
-                        response["message"] = SUCCESS_MESSAGE_DEFAULT
-                    else:
-                        response["status"] = SUCCESS_STATUS
-                        response["url_good"] = False
-                        response["message"] = "Error: Prediction not clear"
-                    create = Url(uuid.uuid4(), data["user_key"], url, tokens[0], str(seq[0][0:]), response["url_good"])
-                    db.session.add(create)
-                    db.session.commit()
-                else:
-                     response["status"] = SUCCESS_STATUS
-                     response["url_good"] = check.url_good
-                     response["message"] = "URL already visited by user"
-
+                response = get_url_analysis(url, data["user_key"])
             else:
                 response["status"] = UNAUTHORIZED_ERROR_STATUS
                 response["message"] = UNAUTHORIZED_ERROR_MESSAGE
@@ -199,12 +307,8 @@ def get_url_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    url = Url.query.get(data["url_key"])
-                    response["url"] = {
-                        "url_key": url.url_key,
-                        "url_string": url.url_string,
-                        "url_good": url.url_good
-                    }
+                    response["url"] = Url.query.get(
+                        data["url_key"]).serialize()
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -255,8 +359,10 @@ def list_urls_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response["urls"] = Url.query.filter_by(
-                        ref_user_key=data["ref_user_key"]).all()
+                    urls = Url.query.filter_by(
+                        ref_user_key=data["user_key"]).all()
+                    response["urls"] = [url.serialize for url in urls]
+                    response["analytics"] = calculate_url_analytics(urls)
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -280,8 +386,10 @@ def register_user_api(request):
             try:
                 create = data["user"]
                 salt = uuid.uuid4().hex
-                hashed_password = hashlib.sha512((create["user_password"] + salt).encode('utf-8')).hexdigest()
-                user = User(uuid.uuid4(),create["user_name"], create["user_email"], hashed_password, salt)
+                hashed_password = hashlib.sha512(
+                    (create["user_password"] + salt).encode('utf-8')).hexdigest()
+                user = User(
+                    uuid.uuid4(), create["user_name"], create["user_email"], hashed_password, salt)
                 db.session.add(user)
                 db.session.commit()
                 response["user"] = {
@@ -306,9 +414,11 @@ def login_user_api(request):
             response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
         else:
             try:
-                user = User.query.filter_by(user_name=data["user_name"]).first()
-                if (user.user_password == hashlib.sha512((data["user_password"]+ user.user_salt).encode('utf-8')).hexdigest()):
-                    check_session = Session.query.filter_by(ref_user_key=user.user_key).first()
+                user = User.query.filter_by(
+                    user_name=data["user_name"]).first()
+                if (user.user_password == hashlib.sha512((data["user_password"] + user.user_salt).encode('utf-8')).hexdigest()):
+                    check_session = Session.query.filter_by(
+                        ref_user_key=user.user_key).first()
                     if check_session == None:
                         response["user"] = {
                             "user_key": user.user_key,
@@ -343,7 +453,6 @@ def logout_user_api(request):
     response = {}
     if request.is_json:
         data = request.get_json()
-        print(data)
         if validate_user_and_session(data["user_key"], data["session_key"]):
             if (data == None):
                 response["status"] = SERVER_ERROR_STATUS
@@ -426,7 +535,8 @@ def create_password_api(request):
             else:
                 try:
                     password = data["password"]
-                    db.session.add(Password(uuid.uuid4(), password["ref_user_key"], password["ref_category_key"], password["password_content"], password["password_username"], password["password_url"]))
+                    db.session.add(Password(uuid.uuid4(), password["ref_user_key"], password["ref_category_key"],
+                                            password["password_content"], password["password_username"], password["password_url"]))
                     db.session.commit()
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
@@ -496,7 +606,8 @@ def list_passwords_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response["passwords"] = Password.query.filter_by(ref_user_key=data["ref_user_key"]).all()
+                    response["passwords"] = [password.serialize for password in Password.query.filter_by(
+                        ref_user_key=data["user_key"]).filter_by(ref_category_key=data["ref_category_key"]).all()]
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -532,6 +643,31 @@ def delete_password_api(request):
     return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
 
 
+def generate_password_api(request):
+    response = {}
+    if request.is_json:
+        data = request.get_json()
+        if validate_user_and_session(data["user_key"], data["session_key"]):
+            if (data == None):
+                response["status"] = SERVER_ERROR_STATUS
+                response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
+            else:
+                try:
+                    alphabet = string.ascii_letters + string.digits
+                    password = ''.join(secrets.choice(alphabet)
+                                       for i in range(data["length"]))
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
+                    response["password"] = password
+                except Exception as e:
+                    response["status"] = SERVER_ERROR_STATUS
+                    response["message"] = str(e)
+        else:
+            response["status"] = UNAUTHORIZED_ERROR_STATUS
+            response["message"] = UNAUTHORIZED_ERROR_MESSAGE
+    return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
+
+
 # Category API
 def create_category_api(request):
     response = {}
@@ -544,7 +680,8 @@ def create_category_api(request):
             else:
                 try:
                     category = data["category"]
-                    db.session.add(Category(uuid.uuid4(), category["ref_user_key"], category["category_name"], category["category_description"]))
+                    db.session.add(Category(uuid.uuid4(
+                    ), category["ref_user_key"], category["category_name"], category["category_description"]))
                     db.session.commit()
                     response["status"] = CREATE_SUCCESS_STATUS
                     response["message"] = CREATE_SUCCESS_MESSAGE
@@ -592,7 +729,8 @@ def get_category_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response["category"] = Category.query.get(data["category_key"])
+                    response["category"] = Category.query.get(
+                        data["category_key"])
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -614,7 +752,8 @@ def list_categories_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response["categories"] = Category.query.filter_by(ref_user_key=data["ref_user_key"])
+                    response["categories"] = [category.serialize for category in Category.query.filter_by(
+                        ref_user_key=data["user_key"]).all()]
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -650,6 +789,12 @@ def delete_category_api(request):
 
 
 # routes
+@app.route("/api/ExpandShortenedUrl", methods=["POST"])
+@cross_origin()
+def expand_shortened_url():
+    return expand_shortened_url_api(flask.request)
+
+
 @app.route("/api/CreateOrAnalyzeUrl", methods=["POST"])
 @cross_origin()
 def analyze_url():
@@ -660,6 +805,12 @@ def analyze_url():
 @cross_origin()
 def get_url():
     return get_url_api(flask.request)
+
+
+@app.route("/api/ListUrls", methods=["POST"])
+@cross_origin()
+def list_urls():
+    return list_urls_api(flask.request)
 
 
 @app.route("/api/UpdateUrl", methods=["POST"])
@@ -720,6 +871,12 @@ def list_passwords():
 @cross_origin()
 def delete_password():
     return delete_password_api(flask.request)
+
+
+@app.route("/api/GeneratePassword", methods=["POST"])
+@cross_origin()
+def generate_password():
+    return generate_password_api(flask.request)
 
 
 @app.route("/api/GetPassword", methods=["POST"])
