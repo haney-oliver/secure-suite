@@ -32,14 +32,14 @@
           <p>Understand your data.</p>
         </article>
         <article class="hidden">
-          <img src="@/assets/images/vpn.svg" />
+          <img src="@/assets/images/shield.svg" />
           <h3>Easy VPN setup</h3>
           <p>Connect to your internal network in one click.</p>
         </article>
       </div>
       <div class="card hidden">
         <h2 class="card-title">Mitigating security vunlerabilities enabled by cloud computing.</h2>
-        <img class="card-picture" src="@/assets/images/cloud-security.svg" />
+        <img class="card-picture" src="@/assets/images/cloud.svg" />
         <p class="card-paragraph">
           Large companies and governments both domestic (U.S.) and abroad,
           driven by necessities of cloud computing and policy, have collected exponentially increasing quantities
@@ -50,7 +50,7 @@
       </div>
       <div class="card hidden">
         <h2 class="card-title">Other security considerations.</h2>
-        <img class="card-picture" src="@/assets/images/local-network.svg" />
+        <img class="card-picture" src="@/assets/images/secure-network.svg" />
         <p class="card-paragraph">
           It may seem counter intuitive, but by making source code public, one can utilize work from passionate
           contributors over time to meet security threats with new and tested solutions iteratively and dynamically.
@@ -61,7 +61,7 @@
       </div>
       <div class="card hidden">
         <h2 class="card-title">Innovative machine learning techniques.</h2>
-        <img class="card-picture" src="@/assets/images/ai.svg" />
+        <img class="card-picture" src="@/assets/images/machine-learning.svg" />
         <p class="card-paragraph">
           Using the Secure Suite browser extension, MalURLNet receives URL traffic before user navigation, and predicts
           whether or not that URL is malicious. MalURLNet uses the latest in URL classification and machine learning to

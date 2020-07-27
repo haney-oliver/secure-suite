@@ -3,9 +3,8 @@
 .navbar {
     height: 70px;
     width: 100%;
-    background-color: rgb(75, 158, 253);
-    margin-bottom: 1em;
-    margin-top: 0;
+    background-color: #6480ff;
+    margin: 0;
     z-index: 100;
 
     .title {
@@ -35,8 +34,7 @@
             }
 
             a:hover {
-                color: rgb(75, 158, 253);
-                background-color: white;
+                background-color: #4f6fff;
                 transition: 0.5s;
             }
         }

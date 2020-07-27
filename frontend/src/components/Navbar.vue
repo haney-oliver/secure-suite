@@ -5,11 +5,8 @@
       <li>
         <router-link to="/">Home</router-link>
       </li>
-      <li @click="scrollTo('book-trailers')">
-        <a href="/#features">Feature</a>
-      </li>
-      <li @click="scrollTo('quickstart')">
-        <a href="/#quickstart">Quickstart</a>
+      <li>
+        <router-link to="/quickstart">Quickstart</router-link>
       </li>
       <li v-show="user">
         <router-link to="/dashboard">Dashboard</router-link>
