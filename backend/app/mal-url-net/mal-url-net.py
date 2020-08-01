@@ -68,8 +68,11 @@ url_good_count = 0
 X_train, X_validate, y_train, y_validate = train_test_split(
     X, y, test_size=0.15, random_state=1000)
 
+print("\nX_train shape: {}\nX_validate shape: {}\ny_train shape: {}\ny_validate shape: {}".format(
+    X_train.shape, X_validate.shape, y_train.shape, y_validate.shape))
+
 X1_train = X_train.iloc[:, 0:60]
-X1_validate = X_train.iloc[:, 0:60]
+X1_validate = X_validate.iloc[:, 0:60]
 
 X2_train = X_train[['url', 'url_domain', 'url_suffix', 'whois_registrar',
                     'whois_server_domain', 'whois_server_org', 'whois_org', 'url_domain_ip']]
@@ -120,18 +123,19 @@ def generate_model(nidl):
     return model
 
 
-def fit_data_to_model(nidl, ne, lr, bs, X1_train, X1_validate, X2_train, X2_validate, y_train, y_validate, model):
+def fit_data_to_model(nidl, ne, lr, bs, X, Xv, X2, X2v, y, yv, model):
     model.compile(loss='binary_crossentropy',
                   optimizer=adam(learning_rate=lr),
                   metrics=['accuracy'])
     print("Model Compiled...")
     mc = ModelCheckpoint("smss-malurl-nidl{}-ne{}-lr{}-bs{}-weights-".format(nidl, ne, lr, bs)+"{epoch:08d}.h5",
                          monitor='val_accuracy', save_weights_only=True, period=1)
-    print(X1_train.shape, X2_train.shape)
-    model_history = model.fit([X1_train, X2_train], y_train, batch_size=bs,
-                              epochs=ne, validation_data=(
-        [X1_validate, X2_validate], y_validate),
-        verbose=1, callbacks=[mc])
+    print(X.shape, X2.shape)
+    print(Xv.shape, X2v.shape)
+    print(y.shape, yv.shape)
+    model_history = model.fit([X, X2], y, batch_size=bs,
+                              epochs=ne, validation_data=([Xv, X2v], yv),
+                              verbose=1, callbacks=[mc])
 
     # Save history of each network configuration for later plotting
     with open('smss-nidl{}-ne{}-lr{}-bs{}-history.pickle'.format(nidl, ne, lr, bs), 'wb') as history_file:
