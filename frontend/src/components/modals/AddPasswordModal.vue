@@ -1,34 +1,33 @@
 <template>
   <div id="addPasswordModal">
-    <div class="xButton" v-on:click="closePasswordModal"></div>
+    <div class="close-button" v-on:click="closePasswordModal"></div>
     <div class="form" id="addPasswordModalForm">
-      <h2 class="formTitle">Add Password</h2>
-      <div class="iconSearchField">
+      <h2 class="form-title">Add Password</h2>
+      <div class="icon-input-field">
         <input
-          class="inputField"
           type="password"
           id="passwordContentInput"
           placeholder="Password Content"
           v-model="password_content"
         />
-        <div class="searchFieldIcon" v-on:click="togglePasswordVisibility"></div>
+        <div class="passwordFieldIcon" v-on:click="togglePasswordVisibility"></div>
       </div>
       <input
-        class="inputField"
+        class="input-field"
         type="text"
         id="passwordUsernameInput"
         placeholder="Password Username"
         v-model="password_username"
       />
       <input
-        class="inputField"
+        class="input-field"
         type="text"
         id="passwordCategoryInput"
         placeholder="Password Category"
-        v-model="password_category"
+        v-model="ref_category_key"
       />
       <input
-        class="inputField"
+        class="input-field"
         type="text"
         id="passwordUrlInput"
         placeholder="Password Url"
@@ -46,8 +45,10 @@
         />
         <h2 id="sliderValue">Password Length: {{ length }}</h2>
       </div>
-      <button v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
-      <button v-on:click="submitPasswordForm" id="submitPasswordForm">Add</button>
+      <span class="buttons">
+        <button v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
+        <button v-on:click="submitPasswordForm" id="submitPasswordForm">Add</button>
+      </span>
     </div>
   </div>
 </template>
@@ -61,32 +62,35 @@ export default {
   data() {
     return {
       length: 25,
-      password_username: String,
-      password_url: String,
-      password_content: String,
-      ref_category_key: String
+      password_username: "",
+      password_url: "",
+      password_content: "",
+      ref_category_key: String,
     };
   },
   methods: {
     generatePassword() {
+      var session = JSON.parse(window.sessionStorage.vuex);
       var passwordField = document.getElementById("passwordContentInput");
       axios
         .post(BACKEND_URI + "/api/GeneratePassword", {
-          length: this.length
+          session_key: session.session_key,
+          user_key: session.user.user_key,
+          length: this.length,
         })
-        .then(response => {
-          var code = response.data.status;
-          passwordField.value = response.data.generatedPassword;
+        .then((response) => {
+          passwordField.value = response.data.password;
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
         });
     },
     submitPasswordForm() {
+      var session = JSON.parse(window.sessionStorage.vuex);
       axios
         .post(BACKEND_URI + "/api/CreatePassword", {
-          user_key: "",
-          session_key: "",
+          session_key: session.session_key,
+          user_key: session.user.user_key,
           password: {
             ref_user_key: this.$route.params.userId,
             password_name: document.getElementById("passwordNameInput").value,
@@ -96,13 +100,11 @@ export default {
               .value,
             password_url: document.getElementById("passwordUrlInput").value,
             password_category: document.getElementById("passwordCategoryInput")
-              .value
-          }
+              .value,
+          },
         })
-        .then(response => {
-          this.closePasswordModal();
-        })
-        .catch(error => {
+        .then(this.closePasswordModal())
+        .catch((error) => {
           console.log(error);
         });
     },
@@ -115,17 +117,20 @@ export default {
       }
     },
     closePasswordModal() {
-      this.$emit("close");
-    }
+      EventBus.$emit("close-add-password-modal");
+    },
   },
   watch: {
-    length: function() {
+    length: function () {
       this.generatePassword();
-    }
-  }
+    },
+  },
+  mounted() {
+    this.generatePassword();
+  },
 };
 </script>
 
 <style scoped>
-@import "../../assets/scss/add-password-modal.scss"
+@import "../../assets/scss/add-password-modal.scss";
 </style>

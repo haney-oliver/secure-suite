@@ -13,12 +13,18 @@
         />
       </div>
     </div>
+    <span class="buttons">
+      <button class="main-button" v-on:click="openAddPasswordModal">
+        <span class="button-content">Add New Password</span>
+      </button>
+    </span>
     <category
       v-for="category in renderCategories"
       :key="category.category_key"
       v-bind:category="category"
       v-bind:color="color"
     >{{ chooseColor() }}</category>
+    <addPasswordModal v-if="addPasswordModalVisible" />
   </span>
 </template>
 
@@ -27,6 +33,8 @@ import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import Category from "@/components/category/Category.vue";
 import Navbar from "@/components/Navbar";
+import AddPasswordModal from "@/components/modals/AddPasswordModal.vue";
+import { EventBus } from "@/event-bus";
 
 export default {
   data() {
@@ -36,12 +44,13 @@ export default {
       renderCategories: [],
       color: String,
       addPasswordModalVisible: false,
-      editPasswordModalVisible: false
+      editPasswordModalVisible: false,
     };
   },
   components: {
     category: Category,
     navbar: Navbar,
+    addPasswordModal: AddPasswordModal,
   },
   methods: {
     fetchCategories() {
@@ -68,7 +77,10 @@ export default {
           console.log(err);
         });
     },
-    openPasswordModal() {},
+    openAddPasswordModal() {
+      this.addPasswordModalVisible = true;
+      console.log("Open password modal");
+    },
     chooseColor() {
       var colors = ["#d0d9f5", "#f5ecd0"];
       if (this.color == colors[0]) {
@@ -81,6 +93,12 @@ export default {
   mounted() {
     this.fetchCategories();
     this.color = "#ffe364";
+  },
+  created() {
+    EventBus.$on(
+      "close-add-password-modal",
+      (this.addPasswordModalVisible = false)
+    );
   },
   watch: {
     filter: function () {

@@ -653,15 +653,20 @@ def generate_password_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
+                    print("\nhere\n")
                     alphabet = string.ascii_letters + string.digits
+                    print("\nhere\n")
+                    print(data["length"])
                     password = ''.join(secrets.choice(alphabet)
-                                       for i in range(data["length"]))
+                                       for i in range(int(data["length"])))
+                    print("\nhere\n")
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                     response["password"] = password
+                    print("\nhere\n")
                 except Exception as e:
                     response["status"] = SERVER_ERROR_STATUS
-                    response["message"] = str(e)
+                    print(e)
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
