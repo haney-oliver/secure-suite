@@ -2,7 +2,7 @@ function logURLBeforeNavigation(details) {
     console.log("Navigating to: " + details.url);
     var data = {
         url: details.url,
-        session_key: "578fa0ca-bee8-4d68-88c3-d222ddeeb3df",
+        session_key: "5a380ec6-4152-407b-915c-f970ece38672",
         user_key: "41356fc0-2d1c-4292-8c55-21f1c2589321",
     }
 

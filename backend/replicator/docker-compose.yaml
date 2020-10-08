@@ -1,0 +1,16 @@
+version: '3'
+services:
+  stream:
+    build: "./run.sh"
+    ports:
+      - "9092:9092"
+    volumes:
+      - ".:/src"
+  consumer:
+    build: "./consumer.py"
+    ports:
+      - "9092:9092"
+    volumes:
+      - ".:/src"
+
+

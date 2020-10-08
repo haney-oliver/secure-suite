@@ -1,0 +1,1 @@
+/usr/local/Cellar/maxwell/1.27.1/bin/maxwell --user='maxwell' --password='XXXXXX' --host='127.0.0.1' --port='3306' --jdbc_options='serverTimezone=UTC' --producer=kafka --kafka.bootstrap.servers='localhost:9092' --kafka_topic='secure-suite-maxwell'
