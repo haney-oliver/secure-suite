@@ -1,0 +1,87 @@
+14:04:46,783 WARN  MaxwellMetrics - Metrics will not be exposed: metricsReportingType not configured.
+14:04:47,156 INFO  ProducerConfig - ProducerConfig values: 
+	acks = 1
+	batch.size = 16384
+	bootstrap.servers = [localhost:9092]
+	buffer.memory = 33554432
+	client.id = 
+	compression.type = none
+	connections.max.idle.ms = 540000
+	enable.idempotence = false
+	interceptor.classes = null
+	key.serializer = class org.apache.kafka.common.serialization.StringSerializer
+	linger.ms = 0
+	max.block.ms = 60000
+	max.in.flight.requests.per.connection = 5
+	max.request.size = 1048576
+	metadata.max.age.ms = 300000
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partitioner.class = class org.apache.kafka.clients.producer.internals.DefaultPartitioner
+	receive.buffer.bytes = 32768
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 0
+	retry.backoff.ms = 100
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.mechanism = GSSAPI
+	security.protocol = PLAINTEXT
+	send.buffer.bytes = 131072
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.1, TLSv1]
+	ssl.endpoint.identification.algorithm = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLS
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	transaction.timeout.ms = 60000
+	transactional.id = null
+	value.serializer = class org.apache.kafka.common.serialization.StringSerializer
+
+14:04:47,219 INFO  AppInfoParser - Kafka version : 1.0.0
+14:04:47,219 INFO  AppInfoParser - Kafka commitId : aaa7af6d4a11b29d
+14:04:47,237 INFO  Maxwell - Maxwell v1.27.1 is booting (MaxwellKafkaProducer), starting at Position[BinlogPosition[master.000001:566517], lastHeartbeat=1602353085340]
+14:04:47,377 INFO  MysqlSavedSchema - Restoring schema id 13 (last modified at Position[BinlogPosition[master.000001:539508], lastHeartbeat=1602352562090])
+14:04:47,488 INFO  MysqlSavedSchema - Restoring schema id 1 (last modified at Position[BinlogPosition[master.000001:4569], lastHeartbeat=0])
+14:04:47,528 INFO  MysqlSavedSchema - beginning to play deltas...
+14:04:47,529 INFO  MysqlSavedSchema - played 12 deltas in 1ms
+14:04:47,552 INFO  BinlogConnectorReplicator - Setting initial binlog pos to: master.000001:566517
+14:04:47,575 INFO  BinaryLogClient - Connected to localhost:3306 at master.000001/566517 (sid:6379, cid:181)
+14:04:47,575 INFO  BinlogConnectorReplicator - Binlog connected.
+14:05:07,873 WARN  BinlogConnectorReplicator - communications failure in binlog:
+com.github.shyiko.mysql.binlog.network.ServerException: A slave with the same server_uuid/server_id as this slave has connected to the master; the first event 'master.000001' at 566517, the last event read from './master.000001' at 570866, the last byte read from './master.000001' at 570866.
+	at com.github.shyiko.mysql.binlog.BinaryLogClient.listenForEventPackets(BinaryLogClient.java:926) [mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at com.github.shyiko.mysql.binlog.BinaryLogClient.connect(BinaryLogClient.java:595) [mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at com.github.shyiko.mysql.binlog.BinaryLogClient$7.run(BinaryLogClient.java:839) [mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at java.lang.Thread.run(Thread.java:834) [?:?]
+14:05:07,884 INFO  BinlogConnectorReplicator - Binlog disconnected.
+14:05:07,923 INFO  TaskManager - Stopping 4 tasks
+14:05:07,924 ERROR TaskManager - cause: 
+com.github.shyiko.mysql.binlog.network.ServerException: A slave with the same server_uuid/server_id as this slave has connected to the master; the first event 'master.000001' at 566517, the last event read from './master.000001' at 570866, the last byte read from './master.000001' at 570866.
+	at com.github.shyiko.mysql.binlog.BinaryLogClient.listenForEventPackets(BinaryLogClient.java:926) ~[mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at com.github.shyiko.mysql.binlog.BinaryLogClient.connect(BinaryLogClient.java:595) ~[mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at com.github.shyiko.mysql.binlog.BinaryLogClient$7.run(BinaryLogClient.java:839) ~[mysql-binlog-connector-java-0.23.2.jar:0.23.2]
+	at java.lang.Thread.run(Thread.java:834) [?:?]
+14:05:07,924 INFO  TaskManager - Stopping: com.zendesk.maxwell.schema.PositionStoreThread@7062baa9
+14:05:07,924 INFO  TaskManager - Stopping: com.zendesk.maxwell.producer.MaxwellKafkaProducerWorker@7ea54ad5
+14:05:07,925 INFO  KafkaProducer - [Producer clientId=producer-1] Closing the Kafka producer with timeoutMillis = 9223372036854775807 ms.
+14:05:07,929 INFO  TaskManager - Stopping: com.zendesk.maxwell.bootstrap.BootstrapController@55e54e33
+14:05:07,929 INFO  TaskManager - Stopping: com.zendesk.maxwell.replication.BinlogConnectorReplicator@332f206f
+14:05:07,930 ERROR Maxwell - Maxwell couldn't find the requested binlog, exiting...
+14:05:09,339 INFO  TaskManager - Stopped all tasks
