@@ -1,10 +1,11 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import HomeView from '@/components/views/HomeView.vue'
-import LoginView from '@/components/views/LoginView.vue'
-import DashboardView from '@/components/views/DashboardView.vue'
-import RegisterView from '@/components/views/RegisterView.vue'
-import VaultView from '@/components/views/VaultView.vue'
+import HomeView from '@/components/views/HomeView'
+import LoginView from '@/components/views/LoginView'
+import DashboardView from '@/components/views/DashboardView'
+import RegisterView from '@/components/views/RegisterView'
+import VaultView from '@/components/views/VaultView'
+import QuickstartView from '@/components/views/QuickstartView'
 
 Vue.use(VueRouter)
 
@@ -33,6 +34,11 @@ const routes = [
         path: '/vault',
         name: 'VaultView',
         component: VaultView
+    }, 
+    {
+        path: '/quickstart',
+        name: 'QuickstartView',
+        component: QuickstartView
     }
 ]
 

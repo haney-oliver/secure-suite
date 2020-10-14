@@ -3,9 +3,16 @@
     <div class="close-button" v-on:click="closePasswordModal"></div>
     <div class="form" id="addPasswordModalForm">
       <h2 class="form-title">Add Password</h2>
+      <input
+        class="input-field"
+        type="text"
+        id="categoryInput"
+        placeholder="Select a Category"
+        v-model="category.category_name"
+        disabled
+      />
       <div class="icon-input-field">
         <input
-          class=input-field
           type="password"
           id="passwordContentInput"
           placeholder="Password Content"
@@ -19,13 +26,6 @@
         id="passwordUsernameInput"
         placeholder="Password Username"
         v-model="password_username"
-      />
-      <input
-        class="input-field"
-        type="text"
-        id="passwordCategoryInput"
-        placeholder="Password Category"
-        v-model="ref_category_key"
       />
       <input
         class="input-field"
@@ -46,11 +46,14 @@
         />
         <h2 id="sliderValue">Password Length: {{ length }}</h2>
       </div>
+      <category-list />
+      <a class="add-cat-button">Add a New Category</a>
       <span class="buttons">
-        <button v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
-        <button v-on:click="submitPasswordForm" id="submitPasswordForm">Add</button>
+        <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
+        <button class="main-button" v-on:click="submitPasswordForm" id="submitPasswordButton">Add</button>
       </span>
     </div>
+    <div class="overlay"></div>
   </div>
 </template>
 
@@ -58,21 +61,24 @@
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
+import CategoryList from "@/components/category/CategoryList"
 
 export default {
+  components: {
+    CategoryList
+  },
   data() {
     return {
-      length: 25,
+      length: 16,
       password_username: "",
       password_url: "",
       password_content: "",
-      ref_category_key: "",
+      category: Object
     };
   },
   methods: {
     generatePassword() {
       var session = JSON.parse(window.sessionStorage.vuex);
-      var passwordField = document.getElementById("passwordContentInput");
       axios
         .post(BACKEND_URI + "/api/GeneratePassword", {
           session_key: session.session_key,
@@ -80,7 +86,7 @@ export default {
           length: this.length,
         })
         .then((response) => {
-          passwordField.value = response.data.password;
+          this.password_content = response.data.password;
         })
         .catch((error) => {
           console.log(error);
@@ -93,15 +99,12 @@ export default {
           session_key: session.session_key,
           user_key: session.user.user_key,
           password: {
-            ref_user_key: this.$route.params.userId,
-            password_name: document.getElementById("passwordNameInput").value,
-            password_content: document.getElementById("passwordContentInput")
-              .value,
-            password_username: document.getElementById("passwordUsernameInput")
-              .value,
-            password_url: document.getElementById("passwordUrlInput").value,
-            password_category: document.getElementById("passwordCategoryInput")
-              .value,
+            ref_category_key: this.category.category_key,
+            ref_user_key: session.user.user_key,
+            password_content: this.password_content,
+            password_username: this.password_username,
+            password_url: this.password_url,
+            password_category: this.password_category
           },
         })
         .then(this.closePasswordModal())
@@ -128,6 +131,9 @@ export default {
   },
   mounted() {
     this.generatePassword();
+    EventBus.$on("category-clicked", e => {
+      this.category = e;
+    })
   },
 };
 </script>

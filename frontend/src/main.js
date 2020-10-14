@@ -3,6 +3,7 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 import IdleVue from 'idle-vue'
+import { BootstrapVue } from 'bootstrap-vue'
 import { EventBus } from './event-bus'
 
 require("dotenv").config()
@@ -15,6 +16,8 @@ Vue.use(IdleVue, {
     idleTime: 60000 * 10,
     eventEmitter: EventBus
 });
+
+Vue.use(BootstrapVue)
 
 new Vue({
     router,

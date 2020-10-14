@@ -1,0 +1,23 @@
+@use 'base';
+
+.category-mini {
+    padding: 0;
+    display: inline-block;
+    text-align: center;
+    margin: 0.25rem;
+    width: 30%;
+    z-index: 25;
+    position: relative;
+    font-size: 13px;
+}
+
+.category-mini:hover {
+    border: 1px solid #60b8ff;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+h3 {
+    margin: 0.25rem;
+    vertical-align: middle;
+}

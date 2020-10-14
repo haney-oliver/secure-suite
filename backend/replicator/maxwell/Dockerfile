@@ -1,11 +1,25 @@
-FROM openjdk:latest
+FROM maven:3.6-jdk-11
+ENV MAXWELL_VERSION=1.27.1 KAFKA_VERSION=1.0.0
 
-WORKDIR /
+RUN apt-get update \
+    && apt-get -y upgrade \
+    && apt-get install -y make
 
-ADD ./maxwell/maxwell-1.27.1/ /maxwell-1.27.1/
-ADD ./wait-for-it.sh /maxwell-1.27.1
+# prime so we can have a cached image of the maven deps
+COPY pom.xml /tmp
+RUN cd /tmp && mvn dependency:resolve
 
-WORKDIR /maxwell-1.27.1/
+COPY . /workspace
+RUN cd /workspace \
+    && KAFKA_VERSION=$KAFKA_VERSION make package MAXWELL_VERSION=$MAXWELL_VERSION \
+    && mkdir /app \
+    && mv /workspace/target/maxwell-$MAXWELL_VERSION/maxwell-$MAXWELL_VERSION/* /app/ \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /workspace/ /root/.m2/ \
+    && echo "$MAXWELL_VERSION" > /REVISION
 
-CMD ./wait-for-it.sh ${HOST}:3306 -t 45 -- bin/maxwell --user=${USER} --password=${PASSWORD} --host=${HOST} --producer=kafka --kafka.bootstrap.servers=${BOOTSTRAP_SERVERS} --kafka_topic=${TOPIC} --jdbc_options=${JDBC_OPTIONS} --filter="exclude: secure_suite.alembic_version"
+WORKDIR /app
 
+ADD ./wait-for-it.sh ./wait-for-it.sh
+
+CMD [ "/bin/bash", "-c", "bin/maxwell-docker" ]
