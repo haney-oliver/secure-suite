@@ -7,7 +7,7 @@ import { EventBus } from './event-bus'
 
 require('dotenv').config()
 
-export const BACKEND_URI = process.env.BACKEND_URI || 'http://localhost:5000'
+export const BACKEND_URI = process.env.BACKEND_URI
 
 Vue.config.productionTip = false
 Vue.use(IdleVue, {

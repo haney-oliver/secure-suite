@@ -18,15 +18,17 @@ import requests
 import http.client
 import re
 
-app = flask.Flask(__name__)
+
+
+app = flask.Flask(__name__) 
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
-app.secret_key = os.environ.get('SECRET_KEY')
+app.secret_key = os.environ.get('SECRET_KEY') 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
+db.create_all()
 
 # model
 class User(db.Model):
@@ -236,7 +238,7 @@ def get_url_analysis(url, user_key):
             response["status"] = SUCCESS_STATUS
             response["url_good"] = False
             response["message"] = "Error: Prediction not clear"
-        create = Url(uuid.uuid4(), user_key, url, tokens[0], str(
+        create = Url(str(uuid.uuid4()), user_key, url, tokens[0], str(
             seq[0][0:]), response["url_good"])
         db.session.add(create)
         db.session.commit()
@@ -389,7 +391,7 @@ def register_user_api(request):
                 hashed_password = hashlib.sha512(
                     (create["user_password"] + salt).encode('utf-8')).hexdigest()
                 user = User(
-                    uuid.uuid4(), create["user_name"], create["user_email"], hashed_password, salt)
+                    str(uuid.uuid4()), create["user_name"], create["user_email"], hashed_password, salt)
                 db.session.add(user)
                 db.session.commit()
                 response["user"] = {
@@ -425,7 +427,7 @@ def login_user_api(request):
                             "user_name": user.user_name,
                             "user_email": user.user_email
                         }
-                        session = Session(uuid.uuid4(), user.user_key)
+                        session = Session(str(uuid.uuid4()), user.user_key)
                         db.session.add(session)
                         db.session.commit()
                         response["session"] = {
@@ -535,7 +537,7 @@ def create_password_api(request):
             else:
                 try:
                     password = data["password"]
-                    db.session.add(Password(uuid.uuid4(), password["ref_user_key"], password["ref_category_key"],
+                    db.session.add(Password(str(uuid.uuid4()), password["ref_user_key"], password["ref_category_key"],
                                             password["password_content"], password["password_username"], password["password_url"]))
                     db.session.commit()
                     response["status"] = SUCCESS_STATUS
@@ -920,4 +922,8 @@ def get_category():
     return (get_category_api(flask.request))
 
 
-app.run(host='0.0.0.0')
+@app.route("/api/HealthCheck", methods=["GET"])
+@cross_origin()
+def health_check():
+  return {"response": {"ok": True, "message": "App is running!", "status": 200}}
+

@@ -88,8 +88,9 @@ services:
       context: ../backend/
       dockerfile: Dockerfile
     environment:
-      DATABASE_URI: mysql://secure_suite:IWANTTOBEHACKED@mysql:3306/secure_suite
+      DATABASE_URI: mysql+pymysql://secure_suite:IWANTTOBEHACKED@mysql:3306/secure_suite
       SECRET_KEY: c2VjdXJlLXN1aXRlLWFwcC1kZXYtc2VjcmV0LWtleQ==
+      FLASK_RUN_HOST: 0.0.0.0
       FLASK_APP: app.py
       FLASK_ENV: development
   secure-suite-frontend:

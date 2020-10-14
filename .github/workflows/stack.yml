@@ -10,5 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: build and run stack
-        run: docker-compose up
+        run: docker-compose up -d
+        working-directory: ${{env.working-directory}}
 

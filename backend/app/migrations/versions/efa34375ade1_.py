@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5be87b1ac89c
+Revision ID: efa34375ade1
 Revises: 
-Create Date: 2020-06-21 00:08:01.394880
+Create Date: 2020-10-13 23:12:48.143616
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5be87b1ac89c'
+revision = 'efa34375ade1'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,12 +32,11 @@ def upgrade():
     op.create_table('category',
     sa.Column('category_key', sa.String(length=36), nullable=False),
     sa.Column('ref_user_key', sa.String(length=36), nullable=True),
-    sa.Column('category_name', sa.String(length=10), nullable=False),
+    sa.Column('category_name', sa.String(length=255), nullable=False),
     sa.Column('category_description', sa.Text(), nullable=False),
     sa.ForeignKeyConstraint(['ref_user_key'], ['user.user_key'], ),
     sa.PrimaryKeyConstraint('category_key'),
-    sa.UniqueConstraint('category_key'),
-    sa.UniqueConstraint('category_name')
+    sa.UniqueConstraint('category_key')
     )
     op.create_table('session',
     sa.Column('session_key', sa.String(length=36), nullable=False),
@@ -53,14 +52,13 @@ def upgrade():
     op.create_table('url',
     sa.Column('url_key', sa.String(length=36), nullable=False),
     sa.Column('ref_user_key', sa.String(length=36), nullable=True),
-    sa.Column('url_string', sa.String(length=36), nullable=False),
+    sa.Column('url_string', sa.Text(), nullable=False),
     sa.Column('url_tokens', sa.Text(), nullable=False),
     sa.Column('url_sequence', sa.Text(), nullable=False),
     sa.Column('url_good', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['ref_user_key'], ['user.user_key'], ),
     sa.PrimaryKeyConstraint('url_key'),
-    sa.UniqueConstraint('url_key'),
-    sa.UniqueConstraint('url_string')
+    sa.UniqueConstraint('url_key')
     )
     op.create_table('password',
     sa.Column('password_key', sa.String(length=36), nullable=False),
