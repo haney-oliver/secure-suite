@@ -5,6 +5,7 @@
       <h2 class="form-title">Add Password</h2>
       <div class="icon-input-field">
         <input
+          class=input-field
           type="password"
           id="passwordContentInput"
           placeholder="Password Content"
@@ -65,7 +66,7 @@ export default {
       password_username: "",
       password_url: "",
       password_content: "",
-      ref_category_key: String,
+      ref_category_key: "",
     };
   },
   methods: {
