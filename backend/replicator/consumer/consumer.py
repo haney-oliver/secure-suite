@@ -3,7 +3,7 @@ import mysql.connector
 import json
 import uuid
 import argparse
-
+import logging
 
 parser = argparse.ArgumentParser()
 
@@ -21,7 +21,7 @@ db = mysql.connector.connect(host=args.host, port=args.port, user=args.user, pas
 dbp = db.cursor()
 consumer = KafkaConsumer(args.topic, bootstrap_servers=args.bootstrap, group_id='secure-suite')
 
-print("INFO waiting for events to consume...")
+logging.info('Waiting for kafka events...')
 
 for msg in consumer:
   message = {"key": json.loads(msg.key), "value": json.loads(msg.value)}
@@ -37,7 +37,7 @@ for msg in consumer:
     column = key
     data = val
 
-  print("EVENT Database: {}, Table: {}, Event Type: {}, Column: {}, Data: {}".format(database_name, table_name, event_type, column, data))
+  logging.info("EVENT Database: {}, Table: {}, Event Type: {}, Column: {}, Data: {}".format(database_name, table_name, event_type, column, data))
   dbp.execute("use audit")
   dbp.execute("CREATE TABLE IF NOT EXISTS {}_events (`event_key` VARCHAR(36) NOT NULL, `table` VARCHAR(255) NOT NULL, `column` VARCHAR(255) NOT NULL, `data` TEXT NOT NULL, `event_type` VARCHAR(50) NOT NULL, `commited` VARCHAR(255) NOT NULL, `xid` VARCHAR(255) NOT NULL, `timestamp` VARCHAR(255), PRIMARY KEY (`event_key`))".format(database_name))
   dbp.execute("INSERT INTO `{}_events` VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(database_name,uuid.uuid4(), table_name, column, data, event_type, str(commited), xid, timestamp))

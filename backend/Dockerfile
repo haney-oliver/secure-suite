@@ -13,5 +13,5 @@ RUN pip3 install pymysql Flask Flask-Cors Flask-SQLAlchemy Flask-Migrate keras S
 
 WORKDIR /app/
 
-CMD ["bash", "-c", "./wait-for-it.sh mysql:3306 -t 60 -- flask db upgrade && flask run"]
+CMD ["bash", "-c", "./wait-for-it.sh mysql:3306 -t 60 -- flask run"]
 
