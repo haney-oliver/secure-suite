@@ -45,6 +45,9 @@ services:
     container_name: maxwell
     depends_on:
       - mysql
+      - kafka
+      - audit-db
+      - zookeeper
     links:
       - mysql
     environment:
@@ -55,8 +58,9 @@ services:
       TOPIC: secure-suite-maxwell
       JDBC_OPTIONS: serverTimezone=UTC
     build:
-      context: ../backend/replicator/
-      dockerfile: maxwell/Dockerfile 
+      context: ../backend/replicator/maxwell
+      dockerfile: Dockerfile
+    command: ./wait-for-it.sh mysql:3306 -t 45 -- ./bin/maxwell --user=maxwell --password=maxwell --host=mysql --producer=kafka --log_level=error --kafka.bootstrap.server=kafka:9092 --kafka_topic=secure-suite-maxwell
   consumer:
     container_name: consumer
     build: 

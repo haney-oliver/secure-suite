@@ -17,6 +17,7 @@ import string
 import requests
 import http.client
 import re
+import logging
 
 
 
@@ -28,6 +29,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.secret_key = os.environ.get('SECRET_KEY') 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
 db.create_all()
 
 # model
@@ -274,6 +276,7 @@ def expand_shortened_url_api(request):
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                     response["url_analysis"] = analysis
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -310,10 +313,11 @@ def get_url_api(request):
             else:
                 try:
                     response["url"] = Url.query.get(
-                        data["url_key"]).serialize()
+                        data["url_key"]).serialize
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -343,8 +347,8 @@ def update_url_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
-                    print(e)
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
@@ -368,6 +372,7 @@ def list_urls_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -402,6 +407,7 @@ def register_user_api(request):
                 response["status"] = SUCCESS_STATUS
                 response["message"] = SUCCESS_MESSAGE_DEFAULT
             except Exception as e:
+                logging.error(e)
                 response["status"] = SERVER_ERROR_STATUS
                 response["message"] = str(e)
     return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
@@ -446,6 +452,7 @@ def login_user_api(request):
                     response["status"] = UNAUTHORIZED_ERROR_STATUS
                     response["message"] = "Invalid credentials. Try again."
             except Exception as e:
+                logging.error(e)
                 response["status"] = SERVER_ERROR_STATUS
                 print(e)
     return flask.Response(json.dumps(response), status=response["status"], mimetype="application/json")
@@ -469,6 +476,7 @@ def logout_user_api(request):
                         response["status"] = SUCCESS_STATUS
                         response["message"] = "User logged out."
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -493,6 +501,7 @@ def update_user_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -517,6 +526,7 @@ def delete_user_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -543,6 +553,7 @@ def create_password_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -561,10 +572,11 @@ def get_password_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    response[""] = Url.query.get(data["url_key"])
+                    response["password"] = Password.query.get(data["password_key"]).serialize
                     response["status"] = CREATE_SUCCESS_STATUS
                     response["message"] = CREATE_SUCCESS_MESSAGE
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -590,6 +602,7 @@ def update_password_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -613,6 +626,7 @@ def list_passwords_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -637,6 +651,7 @@ def delete_password_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -655,20 +670,15 @@ def generate_password_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    print("\nhere\n")
                     alphabet = string.ascii_letters + string.digits
-                    print("\nhere\n")
-                    print(data["length"])
                     password = ''.join(secrets.choice(alphabet)
                                        for i in range(int(data["length"])))
-                    print("\nhere\n")
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                     response["password"] = password
-                    print("\nhere\n")
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
-                    print(e)
         else:
             response["status"] = UNAUTHORIZED_ERROR_STATUS
             response["message"] = UNAUTHORIZED_ERROR_MESSAGE
@@ -693,6 +703,7 @@ def create_category_api(request):
                     response["status"] = CREATE_SUCCESS_STATUS
                     response["message"] = CREATE_SUCCESS_MESSAGE
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -718,6 +729,7 @@ def update_category_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -741,6 +753,7 @@ def get_category_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -764,6 +777,7 @@ def list_categories_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:
@@ -787,6 +801,7 @@ def delete_category_api(request):
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
+                    logging.error(e)
                     response["status"] = SERVER_ERROR_STATUS
                     response["message"] = str(e)
         else:

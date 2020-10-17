@@ -1,6 +1,7 @@
 <template>
   <span class="vault">
     <navbar />
+    <div v-bind:class="{ modalopen: modalOpen}"></div>
     <div>
       <div id="searchContainer">
         <input
@@ -24,16 +25,18 @@
       v-bind:category="category"
       v-bind:color="color"
     >{{ chooseColor() }}</category>
-    <addPasswordModal v-if="addPasswordModalVisible" />
+    <addPasswordModal v-if="addPasswordModalVisible"/>
+    <editPasswordModal :passwordKey=passwordKey v-if="editPasswordModalVisible"/>
   </span>
 </template>
 
 <script>
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
-import Category from "@/components/category/Category.vue";
+import Category from "@/components/category/Category";
 import Navbar from "@/components/Navbar";
-import AddPasswordModal from "@/components/modals/AddPasswordModal.vue";
+import AddPasswordModal from "@/components/modals/AddPasswordModal";
+import EditPasswordModal from "@/components/modals/EditPasswordModal";
 import { EventBus } from "@/event-bus";
 
 export default {
@@ -45,12 +48,15 @@ export default {
       color: String,
       addPasswordModalVisible: false,
       editPasswordModalVisible: false,
+      modalOpen: false,
+      passwordKey: String
     };
   },
   components: {
     category: Category,
     navbar: Navbar,
     addPasswordModal: AddPasswordModal,
+    editPasswordModal: EditPasswordModal
   },
   methods: {
     fetchCategories() {
@@ -79,7 +85,7 @@ export default {
     },
     openAddPasswordModal() {
       this.addPasswordModalVisible = true;
-      console.log("Open password modal");
+      this.openOverlay();
     },
     chooseColor() {
       var colors = ["#d0d9f5", "#f5ecd0"];
@@ -89,15 +95,36 @@ export default {
         this.color = colors[0];
       }
     },
+    openOverlay() {
+      this.modalOpen = true;
+    },
+    closeOverlay() {
+      this.modalOpen = false;
+    }
   },
   mounted() {
     this.fetchCategories();
     this.color = "#ffe364";
   },
   created() {
-    EventBus.$on(
-      "close-add-password-modal",
-      (this.addPasswordModalVisible = false)
+    EventBus.$on("close-add-password-modal",
+      () => { 
+        this.addPasswordModalVisible = false;
+        this.closeOverlay();
+      }
+    );
+    EventBus.$on("password-clicked",
+      password => { 
+        this.passwordKey = password.password_key;
+        this.editPasswordModalVisible = true;
+        this.openOverlay();
+      }
+    );
+    EventBus.$on("close-edit-password-modal",
+      () => { 
+        this.editPasswordModalVisible = false;
+        this.closeOverlay();
+      }
     );
   },
   watch: {

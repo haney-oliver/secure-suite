@@ -15,3 +15,11 @@
         width: 100%;
     }
 }
+
+.modalopen {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.514);
+    filter: blur(2px); -webkit-filter: blur(2px);
+}
