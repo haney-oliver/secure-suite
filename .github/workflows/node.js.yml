@@ -6,7 +6,7 @@ name: frontend
 on:
   pull_request:
     branches: [ master ]
-    paths: [ frontend/* ]
+    paths: [ frontend/** ]
 
 
 jobs:
