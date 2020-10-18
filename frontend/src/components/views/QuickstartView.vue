@@ -64,7 +64,7 @@
           <th>5000:5000</th>
         </tr>
         <tr>
-          <th>app-db</th>
+          <th>frontend</th>
           <th>8080:8080</th>
         </tr>
       </table>
