@@ -4,11 +4,13 @@
     padding: 0;
     display: inline-block;
     text-align: center;
-    margin: 0.25rem;
-    width: 30%;
+    width: 60px;
+    margin: 0.5rem;
     z-index: 25;
     position: relative;
     font-size: 13px;
+    border: 1px solid #ffffff;
+    overflow: hidden;
 }
 
 .category-mini:hover {

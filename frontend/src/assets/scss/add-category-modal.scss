@@ -1,0 +1,132 @@
+@use 'base';
+
+#addCategoryModal {
+    top: 2%;
+    padding: 1em;
+    position: absolute;
+    margin: 5% auto; /* Will not center vertically and won't work in IE6/7. */
+    left: 0;
+    right: 0;
+    bottom: 23rem;
+    background-color: white;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    width: 40%;
+    z-index: 20;
+    transition: all 0.3s linear;
+    -webkit-transition: 0.5s;
+
+    .close-button {
+        float: right;
+        height: 30px;
+        width: 30px;
+        content: url("../images/x-button.svg");
+        position: relative;
+        cursor: pointer;
+    }
+    
+    .close-button:hover {
+        content: url("../images/x-button-active.svg");
+    }
+}
+
+
+
+a.add-cat-button {
+    display: block;
+    margin: 1rem auto;
+    text-align: center;
+    width: 50%;
+}
+
+a.add-cat-button:hover {
+    color: rgb(36, 85, 233);
+    cursor: pointer;
+}
+
+#generatePasswordButton {
+    display: block;
+    float: left;
+    width: 44%;
+}
+
+#submitPasswordButton {
+    display: block;
+    float: right;
+    width: 44%;
+}
+
+.form {
+    margin: 0 auto;
+}
+
+.form-title {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+#passwordContentInput {
+    padding: 0;
+    outline: none;
+    border-style: hidden;
+    width: 80%;
+    height: 100%;
+    display: block;
+    float: left;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    font: 100% "Noto Sans", sans-serif;
+}
+
+.slider {
+    display: block;
+    margin: 0 auto;
+    width: 80%;
+}
+
+#sliderValue {
+    text-align: center;
+}
+
+.input-field {
+    border: none;
+    padding: 0;
+    display: block;
+    margin-bottom: 0;
+    width: 100%;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+}
+
+.icon-input-field {
+    display: block;
+    border: 1px solid #ccc;
+    width: 80%;
+    padding: 0.25rem 0.5rem 0 0.5rem;
+    height: 40px;
+    text-align: center;
+    margin: 1rem auto 1rem auto;
+}
+
+.passwordFieldIcon {
+    display: block;
+    border: none;
+    width: 30px;
+    height: 30px;
+    background-image: url("../images/visibility.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100%;
+    margin: 0.25rem 0.25rem 0.25rem 0.25rem;
+    float: right;
+}
+
+.passwordFieldIcon:hover {
+    background-image: url("../images/visibility-active.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100%;
+    cursor: pointer;
+}

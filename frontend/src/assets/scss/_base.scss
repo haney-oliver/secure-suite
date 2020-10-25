@@ -50,6 +50,25 @@ body {
     z-index: 5;
 }
 
+.danger {
+    display: inline-block;
+    border-radius: 4px;
+    border: none;
+    color: #ffffff;
+    text-align: center;
+    font-size: 20px;
+    padding: 1rem;
+    width: 50%;
+    transition: all 0.5s;
+    cursor: pointer;
+    margin: 0.5rem;
+    background-color: #ff6f6f
+}
+
+.danger:hover {
+    background-color: #dd4949
+}
+
 .buttons {
     width: 100%;
     text-align: center;

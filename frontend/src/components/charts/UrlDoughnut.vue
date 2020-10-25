@@ -15,7 +15,7 @@ export default {
   },
   watch: {
     chartdata: {
-      immediate: true,
+      immediate: false,
       deep: true,
       handler() {
         this.renderChart(this.chartdata, this.options);

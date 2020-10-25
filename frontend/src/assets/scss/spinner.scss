@@ -1,0 +1,18 @@
+@use "base";
+
+.spinner {
+  position: fixed;
+  display: block;
+  z-index: 9999;
+  width: 10%;
+  color:rgb(205, 221, 249);
+  left: 45%;
+  top: 22rem;
+}
+
+.fulfilling-square-spinner {
+  display: block;
+  position: absolute;
+  z-index: 9988;
+  margin: 0 auto 0 auto;
+}

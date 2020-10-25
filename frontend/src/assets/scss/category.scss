@@ -4,4 +4,33 @@
     padding: 2rem;
     display: block;
     text-align: center;
+
+    .close-button {
+        float: right;
+        height: 30px;
+        width: 30px;
+        content: url("../images/x-button.svg");
+        position: relative;
+        cursor: pointer;
+        z-index: 9997;
+    }
+
+    .close-button:hover {
+        content: url("../images/x-button-active.svg");
+    }
+}
+
+.category-name {
+    display: block;
+    padding: 0 15px 0 15px; 
+    margin: 0.5rem auto 0.5rem auto;
+}
+
+
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity .5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+    opacity: 0;
 }

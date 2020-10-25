@@ -1,5 +1,13 @@
 @use 'base';
 
+
+#searchContainer {
+    background-color:rgb(205, 221, 249);
+    height: 80px;
+    margin-top: 0;
+    padding-top: 1rem;
+}
+
 #searchField {
     width: 70%;
     margin: 1rem auto 1rem auto;
@@ -7,6 +15,7 @@
 }
 
 .vault {
+    background-color:rgb(205, 221, 249);
     .container{
         margin: 0;
     }
@@ -14,6 +23,19 @@
         height: 50px;
         width: 100%;
     }
+    margin-top: 0;
+}
+
+.message {
+    display: inline;
+    text-align: center;
+}
+
+.vault-buttons {
+    width: 100%;
+    text-align: center;
+    display: inline-block;
+    background-color:rgb(205, 221, 249);
 }
 
 .modalopen {
@@ -22,4 +44,12 @@
     width: 100%;
     background-color: rgba(0, 0, 0, 0.514);
     filter: blur(2px); -webkit-filter: blur(2px);
+}
+
+.refresh-icon {
+    position: relative;
+    z-index: 21;
+    height: 30px;
+    width: 30px;
+    cursor: pointer;
 }

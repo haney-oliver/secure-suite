@@ -157,7 +157,8 @@ class Password(db.Model):
             "password_key": self.password_key,
             "password_username": self.password_username,
             "password_url": self.password_url,
-            "password_content": self.password_content
+            "password_content": self.password_content,
+            "ref_category_key": self.ref_category_key
         }
 
 
@@ -573,6 +574,7 @@ def get_password_api(request):
             else:
                 try:
                     response["password"] = Password.query.get(data["password_key"]).serialize
+                    print(response["password"])
                     response["status"] = CREATE_SUCCESS_STATUS
                     response["message"] = CREATE_SUCCESS_MESSAGE
                 except Exception as e:
@@ -596,8 +598,12 @@ def update_password_api(request):
             else:
                 try:
                     update = data["password"]
+                    print(update)
                     password = Password.query.get(data["password_key"])
-                    password = update
+                    password.password_content = update["password_content"]
+                    password.ref_category_key = update["ref_category_key"]
+                    password.password_username = update["password_username"]
+                    password.password_url = update["password_url"]
                     db.session.commit()
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
@@ -647,7 +653,7 @@ def delete_password_api(request):
                 try:
                     password = Password.query.get(data["password_key"])
                     db.session.delete(password)
-                    db.session.commit
+                    db.session.commit()
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -697,8 +703,7 @@ def create_category_api(request):
             else:
                 try:
                     category = data["category"]
-                    db.session.add(Category(uuid.uuid4(
-                    ), category["ref_user_key"], category["category_name"], category["category_description"]))
+                    db.session.add(Category(str(uuid.uuid4()), category["ref_user_key"], category["category_name"], category["category_description"]))
                     db.session.commit()
                     response["status"] = CREATE_SUCCESS_STATUS
                     response["message"] = CREATE_SUCCESS_MESSAGE
@@ -748,8 +753,9 @@ def get_category_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
+                    print(data)
                     response["category"] = Category.query.get(
-                        data["category_key"])
+                        data["category_key"]).serialize
                     response["status"] = SUCCESS_STATUS
                     response["message"] = SUCCESS_MESSAGE_DEFAULT
                 except Exception as e:
@@ -796,6 +802,10 @@ def delete_category_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
+                    passwords = [password for password in Password.query.filter_by(
+                        ref_user_key=data["user_key"]).filter_by(ref_category_key=data["category_key"]).all()]
+                    for password in passwords:
+                        db.session.delete(password)
                     db.session.delete(Category.query.get(data["category_key"]))
                     db.session.commit()
                     response["status"] = SUCCESS_STATUS

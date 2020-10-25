@@ -6,6 +6,7 @@ ADD app/ app/
 ADD requirements.txt requirements.txt
 ADD replicator/wait-for-it.sh ./app/wait-for-it.sh
 
+RUN apt-get update --fix-missing
 RUN apt-get install -y libmysqlclient-dev
 RUN pip3 install --upgrade pip
 RUN pip3 install pymysql Flask Flask-Cors Flask-SQLAlchemy Flask-Migrate keras SQLAlchemy mysqlclient

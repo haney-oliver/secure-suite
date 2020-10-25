@@ -11,6 +11,7 @@
       </div>
     </div>
     <div class="form container" id="expand-url-form">
+      <h3>Expand and Analyze Shortened URL</h3>
       <input
         transition="slidein"
         type="text"
@@ -19,11 +20,6 @@
         placeholder="Enter shortened URL"
         v-model="shortenedUrl"
       />
-      <span class="buttons">
-        <button class="main-button" v-on:click="expandShortenedUrl">
-          <span class="button-content">Expand</span>
-        </button>
-      </span>
       <input
         transition="slidein"
         type="text"
@@ -31,7 +27,38 @@
         id="expandedUrlField"
         placeholder="Expanded URL will appear here"
         v-model="expandedUrl"
+        disabled
       />
+      <span class="buttons">
+        <button class="main-button" v-on:click="expandShortenedUrl">
+          <span class="button-content">Expand</span>
+        </button>
+      </span>
+    </div>
+    <div class="form container" id="analyze-url-form">
+      <h3>Analyze URL</h3>
+      <input
+        transition="slidein"
+        type="text"
+        class="input-field"
+        id="urlField"
+        placeholder="Enter URL"
+        v-model="urlToAnalyze"
+      />
+      <input
+        transition="slidein"
+        type="text"
+        class="input-field"
+        id="expandedUrlField"
+        v-model="urlClassificationString"
+        disabled
+        v-bind:class="[urlBad ? urlBadClass : urlGoodClass]"
+      />
+      <span class="buttons">
+        <button class="main-button" v-on:click="analyzeUrl">
+          <span class="button-content">Analyze</span>
+        </button>
+      </span>
     </div>
   </div>
 </template>
@@ -49,8 +76,13 @@ export default {
   },
   data() {
     return {
+      urlClassificationString: "",
+      urlGoodClass: "url-good",
+      urlBadClass: "url-bad",
+      urlToAnalyze: "",
       shortenedUrl: "",
       expandedUrl: "",
+      urlBad: null,
       urls: [],
       good_urls: [],
       mal_urls: [],
@@ -88,11 +120,10 @@ export default {
             this.data.datasets[0].data.push(analytics.number_good_urls);
             this.data.datasets[0].data.push(analytics.number_mal_urls);
           } else {
-            this.data.datasets[0].data[0](analytics.number_good_urls);
-            this.data.datasets[0].data[1](analytics.number_mal_urls);
+            this.data.datasets[0].data[0] = (analytics.number_good_urls);
+            this.data.datasets[0].data[1] = (analytics.number_mal_urls);
           }
-
-          console.log(this.data.datasets[0]);
+          this.$forceUpdate();
         })
         .catch((error) => {
           console.log(error);
@@ -114,8 +145,29 @@ export default {
           console.log(error);
         });
     },
+    analyzeUrl() {
+      var session = JSON.parse(window.sessionStorage.vuex);
+      axios
+        .post(BACKEND_URI + "/api/CreateOrAnalyzeUrl", {
+          session_key: session.session_key,
+          user_key: session.user.user_key,
+          url: this.urlToAnalyze,
+        })
+        .then((response) => {
+          this.urlBad = !response.data.url_good;
+          if (this.urlBad == true) {
+            this.urlClassificationString = "Malicious"
+          } else {
+            this.urlClassificationString = "Benign"
+          }
+          this.fetchUrls();
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
   },
-  created() {
+  mounted() {
     this.fetchUrls();
   },
   computed: {
@@ -123,6 +175,12 @@ export default {
       return this.data;
     },
   },
+  watch: {
+    data: function () {
+      this.fetchUrls();
+      this.$forceUpdate();
+    }
+  }
 };
 </script>
 

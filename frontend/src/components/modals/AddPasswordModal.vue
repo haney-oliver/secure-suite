@@ -47,13 +47,14 @@
         <h2 id="sliderValue">Password Length: {{ length }}</h2>
       </div>
       <category-list />
-      <a class="add-cat-button">Add a New Category</a>
+      <a class="add-cat-button" v-on:click="openAddCategoryModal">Add a New Category</a>
       <span class="buttons">
         <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
         <button class="main-button" v-on:click="submitPasswordForm" id="submitPasswordButton">Add</button>
       </span>
     </div>
     <div class="overlay"></div>
+    <add-category-modal v-if="addCategoryModalVisible" />
   </div>
 </template>
 
@@ -62,10 +63,12 @@ import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
 import CategoryList from "@/components/category/CategoryList"
+import AddCategoryModal from "@/components/modals/AddCategoryModal"
 
 export default {
   components: {
-    CategoryList
+    CategoryList,
+    AddCategoryModal
   },
   data() {
     return {
@@ -73,7 +76,8 @@ export default {
       password_username: "",
       password_url: "",
       password_content: "",
-      category: Object
+      category: Object,
+      addCategoryModalVisible: false
     };
   },
   methods: {
@@ -123,6 +127,9 @@ export default {
     closePasswordModal() {
       EventBus.$emit("close-add-password-modal");
     },
+    openAddCategoryModal() {
+      this.addCategoryModalVisible = true;
+    }
   },
   watch: {
     length: function () {
@@ -133,6 +140,9 @@ export default {
     this.generatePassword();
     EventBus.$on("category-clicked", e => {
       this.category = e;
+    })
+    EventBus.$on("close-add-category-modal", () => {
+      this.addCategoryModalVisible = false;
     })
   },
 };
