@@ -14,6 +14,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pickle as pkl
 import re
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+import itertools
+import tensorflow as tf
+from io import StringIO
 
 
 # Tunable hyperparameters
@@ -74,11 +79,52 @@ print("\nX_train shape: {}\nX_validate shape: {}\ny_train shape: {}\ny_validate 
 X1_train = X_train.iloc[:, 0:60]
 X1_validate = X_validate.iloc[:, 0:60]
 
-X2_train = X_train[['url', 'url_domain', 'url_suffix', 'whois_registrar',
-                    'whois_server_domain', 'whois_server_org', 'whois_org', 'url_domain_ip']]
-X2_validate = X_validate[['url', 'url_domain', 'url_suffix', 'whois_registrar',
-                          'whois_server_domain', 'whois_server_org', 'whois_org', 'url_domain_ip']]
+X2_train = X_train[['url_domain','url_suffix','whois_registrar','whois_domain','whois_suffix','whois_org','url_domain_ip','label']]
+X2_validate = X_validate[['url_domain','url_suffix','whois_registrar','whois_domain','whois_suffix','whois_org','url_domain_ip','label']]
 
+
+def plot_confusion_matrix(confusion, classes, nidl, ne, lr, bs, normalize=False, cmap=plt.cm.Blues):
+  if normalize:
+    confusion = confusion.astype('float') / confusion.sum(axis=1)[:, np.newaxis]
+    title = 'Normalized Confusion Matrix'
+  else:
+    title = 'Confusion Matrix'
+  plt.imshow(confusion, interpolation='nearest', cmap=cmap)
+  plt.title(title)
+  plt.colorbar()
+  tick_marks = np.arange(len(classes))
+  plt.xticks(tick_marks, classes, rotation=45)
+  plt.yticks(tick_marks, classes)
+
+  fmt = '.2f' if normalize else 'd'
+  thresh = confusion.max() / 2
+  for i, j in itertools.product(range(confusion.shape[0]), range(confusion.shape[1])):
+    plt.text(j, i, format(confusion[i, j], fmt),
+      horizontalalignment="center", color="white" if confusion[i, j] > thresh else "black")
+
+  plt.tight_layout()
+  plt.ylabel('True label')
+  plt.xlabel('Predicted label')
+  plt.savefig("smss-confusion-nidl{}-ne{}-lr{}-bs{}.png".format(nidl, ne, lr, bs))
+
+def report_to_df(report):
+  report = re.sub(r" +", " ", report).replace("macro avg", "macro/avg").replace("weighted avg", "weighted/avg").replace("\n ", "\n")
+  print(report)
+  report_df = pd.read_csv(StringIO("Classes" + report), sep=' ', index_col=0)        
+  return(report_df)
+
+def generate_multiclass_report(model, x, y_true, nidl, ne, lr, bs, batch_size=32, binary=False):
+  y_pred = [round(x[0]) for x in model.predict(x, batch_size=batch_size)]
+  print("Classification Report")
+  report = classification_report(y_true, y_pred, target_names=["Malicious", "Benign"])
+  print(report)
+  df = report_to_df(report)
+  print(df)
+  df.to_csv('smss-classification-report-nidl{}-ne{}-lr{}-bs{}.csv'.format(nidl, ne, lr, bs))
+
+  confusion = confusion_matrix(y_true, y_pred)
+  print(confusion)
+  plot_confusion_matrix(confusion, ["Malicious", "Benign"], nidl, ne, lr, bs)
 
 def generate_model(nidl):
     unstruct_input = Input(shape=(60,))
@@ -92,7 +138,6 @@ def generate_model(nidl):
     m1 = Dropout(0.2)(m1)
     m1 = MaxPooling1D()(m1)
     m1 = LSTM(40, dropout=0.2, recurrent_dropout=0.2)(m1)
-    print("Shape of m1: {}".format(m1.shape))
 
     # For ingesting structured data
     m2 = Dense(32, activation='relu')(struct_input)
@@ -127,15 +172,11 @@ def fit_data_to_model(nidl, ne, lr, bs, X, Xv, X2, X2v, y, yv, model):
     model.compile(loss='binary_crossentropy',
                   optimizer=adam(learning_rate=lr),
                   metrics=['accuracy'])
-    print("Model Compiled...")
-    mc = ModelCheckpoint("smss-malurl-nidl{}-ne{}-lr{}-bs{}-weights-".format(nidl, ne, lr, bs)+"{epoch:08d}.h5",
-                         monitor='val_accuracy', save_weights_only=True, period=1)
-    print(X.shape, X2.shape)
-    print(Xv.shape, X2v.shape)
-    print(y.shape, yv.shape)
+    mc = ModelCheckpoint("smss-malurl-nidl{}-ne{}-lr{}-bs{}-weights-".format(nidl, ne, lr, bs)+"{epoch:08d}.h5", monitor='val_accuracy', save_weights_only=True, period=1)
     model_history = model.fit([X, X2], y, batch_size=bs,
                               epochs=ne, validation_data=([Xv, X2v], yv),
                               verbose=1, callbacks=[mc])
+    generate_multiclass_report(model, [Xv, X2v], yv, nidl, ne, lr, bs)
 
     # Save history of each network configuration for later plotting
     with open('smss-nidl{}-ne{}-lr{}-bs{}-history.pickle'.format(nidl, ne, lr, bs), 'wb') as history_file:
@@ -167,11 +208,9 @@ def fit_data_to_model(nidl, ne, lr, bs, X, Xv, X2, X2v, y, yv, model):
     plt.savefig("smss-loss-nidl{}-ne{}-lr{}-bs{}.png".format(nidl, ne, lr, bs))
     plt.clf()
 
-
 # Perform training hyperparameter optimization
 for nidl in _nidl:
     for ne in _ne:
         for lr in _lr:
             for bs in _bs:
-                fit_data_to_model(nidl, ne, lr, bs, X1_train, X1_validate, X2_train, X2_validate,
-                                  y_train, y_validate, generate_model(nidl))
+                fit_data_to_model(nidl, ne, lr, bs, X1_train, X1_validate, X2_train, X2_validate, y_train, y_validate, generate_model(nidl))

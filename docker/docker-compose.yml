@@ -13,12 +13,12 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
   audit-db:
-    container_name: audit-db
+    container_name: audit-db  
     image: mysql:5.7
     volumes:
       - ../backend/replicator/audit-init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "33061:3306"
+      - "33062:3306"
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: 1    
   zookeeper:

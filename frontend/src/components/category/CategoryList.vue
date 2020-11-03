@@ -1,17 +1,21 @@
 <template>
-  <span class="category-list">
+  <div class=container>
+    <h4>Catagories</h4>
+    <span class="category-list">
     <category-mini
       v-for="category in categories"
       :key="category.category_key" 
       v-bind:category="category"
     />
   </span>
+  </div>
 </template>
 
 <script>
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import CategoryMini from "@/components/category/CategoryMini"
+import { EventBus } from "@/event-bus"
 
 export default {
   props: {
@@ -35,6 +39,9 @@ export default {
         })
         .then(response => {
           this.categories = response.data.categories;
+          console.log(response.data.categories)
+          this.categories.sort();
+          this.$forceUpdate();
         })
         .catch(err => {
           console.log(err);
@@ -43,6 +50,10 @@ export default {
   },
   mounted() {
     this.fetchCategories();
+    EventBus.$on("close-add-category-modal", () => {
+      this.fetchCategories();
+      this.$forceUpdate();
+    })
   }
 };
 </script>

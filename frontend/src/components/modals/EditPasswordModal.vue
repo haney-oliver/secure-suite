@@ -3,6 +3,14 @@
     <div class="close-button" v-on:click="closePasswordModal"></div>
     <div class="form" id="editPasswordModalForm">
       <h2 class="form-title">Edit Password</h2>
+      <input
+          class="input-field"
+          type="text"
+          id="categoryInput"
+          placeholder="Select a Category"
+          v-model="category.category_name"
+          disabled
+      />
       <div class="icon-input-field">
         <input
           type="password"
@@ -12,13 +20,6 @@
         />
         <div class="passwordFieldIcon" v-on:click="togglePasswordVisibility"></div>
       </div>
-      <input
-        class="input-field"
-        type="text"
-        id="passwordUrlInput"
-        placeholder="Create or Select a Category"
-        v-model="password.password_url"
-      />
       <input
         class="input-field"
         type="text"
@@ -45,12 +46,14 @@
         />
         <h2 id="sliderValue">Password Length: {{ length }}</h2>
         <category-list />
+        <a class="add-cat-button" v-on:click="openAddCategoryModal">Add a New Category</a>
       </div>
       <span class="buttons">
         <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
         <button class="main-button" v-on:click="submitPasswordForm" id="submitPasswordButton">Update</button>
       </span>
     </div>
+    <add-category-modal v-if="addCategoryModalVisible"/>
   </div>
 </template>
 
@@ -59,10 +62,12 @@ import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
 import CategoryList from "@/components/category/CategoryList"
+import AddCategoryModal from "@/components/modals/AddCategoryModal"
 
 export default {
   components: {
-    CategoryList
+    CategoryList,
+    AddCategoryModal
   },
   props: {
     passwordKey: String
@@ -70,10 +75,28 @@ export default {
   data() {
     return {
       length: 16,
-      password: Object
+      password: Object,
+      category: Object,
+      addCategoryModalVisible: false,
+      addCategoryModalKey: 0
     };
   },
   methods: {
+    getCategory() {
+      var session = JSON.parse(window.sessionStorage.vuex);
+      axios
+        .post(BACKEND_URI + "/api/GetCategory", {
+          session_key: session.session_key,
+          user_key: session.user.user_key,
+          category_key: this.password.ref_category_key
+        })
+        .then((response) => {
+          this.category = response.data.category;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     getPassword() {
       var session = JSON.parse(window.sessionStorage.vuex);
       axios
@@ -84,6 +107,7 @@ export default {
         })
         .then((response) => {
           this.password = response.data.password;
+          this.getCategory();
         })
         .catch((error) => {
           console.log(error);
@@ -98,7 +122,7 @@ export default {
           length: this.length,
         })
         .then((response) => {
-          this.password_content = response.data.password;
+          this.password.password_content = response.data.password;
         })
         .catch((error) => {
           console.log(error);
@@ -113,10 +137,10 @@ export default {
           password_key: this.password.password_key,
           password: {
             ref_user_key: session.user.user_key,
-            password_content: this.password_content,
-            password_username: this.password_username,
-            password_url: this.password_url,
-            password_category: this.password_category
+            password_content: this.password.password_content,
+            password_username: this.password.password_username,
+            password_url: this.password.password_url,
+            ref_category_key: this.category.category_key
           },
         })
         .then(this.closePasswordModal())
@@ -135,6 +159,9 @@ export default {
     closePasswordModal() {
       EventBus.$emit("close-edit-password-modal");
     },
+    openAddCategoryModal() {
+      this.addCategoryModalVisible = true;
+    }
   },
   watch: {
     length: function () {
@@ -145,6 +172,9 @@ export default {
     this.getPassword();
     EventBus.$on("category-clicked", e => {
       this.category = e;
+    })
+    EventBus.$on("close-add-category-modal", () => {
+      this.addCategoryModalVisible = false;
     })
   },
 };

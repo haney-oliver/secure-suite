@@ -1,11 +1,15 @@
 <template>
-  <span class="category" v-bind:style="{'background-color': color}">
-    <h3>{{ category.category_name }}</h3>
+  <span v-if="showCat" class="category" v-bind:style="{'background-color': color}" @mouseover="showX=true" @mouseleave="showX=false">
+    <transition name="fade">
+      <div v-on:click="openCategoryDeletionPopup" class="close-button" v-show="showX"></div>
+    </transition>  
+    <h3 class="category-name">{{ category.category_name }}</h3>
     <password
       v-for="password in passwords"
       :key="password.password_key"
       v-bind:password="password"
     />
+    <category-deletion-popup :category=category v-if="categoryDeletionPopupVisible"/>
   </span>
 </template>
 
@@ -13,6 +17,8 @@
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import Password from "@/components/password/Password.vue";
+import CategoryDeletionPopup from "@/components/popup/CategoryDeletionPopup"
+import { EventBus } from '../../event-bus';
 
 export default {
   props: {
@@ -21,11 +27,15 @@ export default {
   },
   data() {
     return {
-      passwords: []
+      passwords: [],
+      showX: false,
+      showCat: false,
+      categoryDeletionPopupVisible: false
     };
   },
   components: {
-    password: Password
+    password: Password,
+    CategoryDeletionPopup
   },
   methods: {
     fetchPasswords() {
@@ -38,14 +48,42 @@ export default {
         })
         .then(response => {
           this.passwords = response.data.passwords;
+          if (response.data.passwords == 0) {
+            this.showCat = false;
+          } else {
+            this.showCat = true;
+          }
         })
         .catch(err => {
           console.log(err);
         });
+    },
+    openCategoryDeletionPopup() {
+      this.categoryDeletionPopupVisible = true;
     }
   },
   mounted() {
+    EventBus.$emit("category-mounted");
     this.fetchPasswords();
+
+    EventBus.$on("close-delete-category-popup", () => {
+      this.categoryDeletionPopupVisible = false;
+    })
+    EventBus.$on("close-delete-password-popup",() => {
+      setTimeout(2000)
+      this.fetchPasswords()
+      this.$forceUpdate();
+    })
+    EventBus.$on("close-add-password-modal",() => {
+      setTimeout(2000)
+      this.fetchPasswords();
+      this.$forceUpdate();
+    })
+    EventBus.$on("close-edit-password-modal",() => {
+      setTimeout(2000)
+      this.fetchPasswords();
+      this.$forceUpdate();
+    })
   }
 };
 </script>

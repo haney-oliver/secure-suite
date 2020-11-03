@@ -2,11 +2,11 @@
 
 .doughnut {
     width: 47.5%;
-    border: solid 1px #6480ff;
-    padding: 1.5rem;
+    padding: 1.25rem;
     min-height: 500px;
     display: block;
     float: left;
+    margin: 0.5rem;
 }
 
 .stats {
@@ -28,6 +28,22 @@
     display: block;
     float: right;
     width: 45%;
-    border: solid 1px #6480ff;
-    margin-right: 1rem;
+    margin: 1rem;
+}
+
+#analyze-url-form {
+    display: block;
+    float: right;
+    width: 45%;
+    margin: 1rem;
+}
+
+.url-good {
+    background-color: #dde4ff;
+    color: #2f55ff;
+}
+
+.url-bad {
+    background-color: #ffeff3;
+    color: #ff466e;
 }
