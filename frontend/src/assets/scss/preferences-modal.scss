@@ -1,0 +1,98 @@
+
+#preferencesModal {
+  top: -1.6rem;
+  padding: 1em;
+  position: absolute;
+  margin: 5% auto; /* Will not center vertically and won't work in IE6/7. */
+  right: 1rem;
+  background-color: white;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  width: 25%;
+  z-index: 9989;
+  transition: all 0.3s linear;
+  -webkit-transition: 0.5s;
+
+  .close-button {
+      float: right;
+      height: 30px;
+      width: 30px;
+      content: url("../images/x-button.svg");
+      position: relative;
+      cursor: pointer;
+  }
+  
+  .close-button:hover {
+      content: url("../images/x-button-active.svg");
+  }
+
+}
+
+.label {
+  margin: 0 0 0 1rem
+}
+
+.form {
+  margin: 0 auto;
+}
+
+.form-title {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+#passwordInput {
+  padding: 0;
+  outline: none;
+  border-style: hidden;
+  width: 80%;
+  height: 100%;
+  display: block;
+  float: left;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  font: 100% "Noto Sans", sans-serif;
+}
+
+.input-field {
+  border: none;
+  padding: 0;
+  display: block;
+  margin-bottom: 0;
+  width: 100%;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+}
+
+.icon-input-field {
+  display: block;
+  border: 1px solid #ccc;
+  width: 80%;
+  padding: 0.25rem 0.5rem 0 0.5rem;
+  height: 40px;
+  text-align: center;
+  margin: 1rem auto 1rem auto;
+}
+
+.passwordFieldIcon {
+  display: block;
+  border: none;
+  width: 30px;
+  height: 30px;
+  background-image: url("../images/visibility.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+  margin: 0.25rem 0.25rem 0.25rem 0.25rem;
+  float: right;
+}
+
+.passwordFieldIcon:hover {
+  background-image: url("../images/visibility-active.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+  cursor: pointer;
+}

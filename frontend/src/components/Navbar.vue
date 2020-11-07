@@ -15,12 +15,15 @@
         <router-link to="/vault">Vault</router-link>
       </li>
       <li v-show="user">
-        <router-link to="/preferences">Preferences</router-link>
+        <a class="alternative" v-on:click="openPreferencesModal">Preferences</a>
       </li>
       <li v-if="user">
-        <a @click="logOut">Logout</a>
+        <a class="alternative" @click="logOut">Logout</a>
       </li>
     </ul>
+    <transition name="list">
+      <preferences-modal v-show="preferencesModalVisible" />
+    </transition>
   </div>
 </template>
 
@@ -31,12 +34,17 @@ import axios from "axios";
 import { BACKEND_URI } from "../main";
 import store from "../store";
 import router from "../router";
+import PreferencesModal from "@/components/modals/PreferencesModal"
 
 export default {
   name: "Navbar",
+  components: {
+    PreferencesModal
+  },
   data() {
     return {
-      showList: false
+      showList: false,
+      preferencesModalVisible: false
     };
   },
   methods: {
@@ -53,13 +61,21 @@ export default {
         })
         .catch(response => console.log(response.message));
     },
+    openPreferencesModal() {
+      this.preferencesModalVisible = true;
+    },
     scrollTo(ref) {
       EventBus.$emit("scroll-to", ref);
-    }
+    },
   },
   computed: {
     ...mapGetters({
       user: "user"
+    })
+  },
+  mounted() {
+    EventBus.$on("close-preferences-modal", () => {
+      this.preferencesModalVisible = false;
     })
   }
 };

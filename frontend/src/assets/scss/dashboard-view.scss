@@ -1,12 +1,15 @@
 @use 'base';
 
 .doughnut {
-    width: 47.5%;
+    width: 40%;
     padding: 1.25rem;
     min-height: 500px;
     display: block;
     float: left;
-    margin: 0.5rem;
+}
+
+.doughnut.container {
+    margin: 0.5rem 0.5rem 0.5rem 2rem;
 }
 
 .stats {

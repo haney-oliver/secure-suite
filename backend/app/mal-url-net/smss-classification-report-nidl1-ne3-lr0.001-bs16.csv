@@ -1,6 +1,0 @@
-Classes,precision,recall,f1-score,support
-Malicious,0.84,1.0,0.91,84.0
-Benign,0.0,0.0,0.0,16.0
-accuracy,0.84,100.0,,
-macro/avg,0.42,0.5,0.46,100.0
-weighted/avg,0.71,0.84,0.77,100.0
