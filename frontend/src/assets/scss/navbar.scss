@@ -12,7 +12,7 @@
         float: left;
         margin: 1.35rem 0 0 1rem;
         font-weight: 700;
-        color: #242d57;
+        color: #c2c3ff;
     }
 
     .options {
@@ -38,6 +38,41 @@
                 background-color: #4f6fff;
                 transition: 0.5s;
             }
+
+            .alternative:hover {
+                color: #4f6fff;
+                background-color: #ffffff;
+                transition: 0.5s;
+            }
         }
     }
 }
+
+.list-enter {
+    opacity: 0;
+  }
+  .list-enter-active {
+    animation: slide-in .5s ease-out forwards;
+  }
+  .list-leave-to, .list-leave-active {
+    opacity: 0;
+    animation: slide-out .5s ease-out forwards;
+  }
+  
+  @keyframes slide-in {
+    from { 
+      transform: translateY(-40px);   
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-out {
+    from { 
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-40px);
+    }
+  }
+

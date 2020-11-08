@@ -6,7 +6,6 @@ import DashboardView from '@/components/views/DashboardView'
 import RegisterView from '@/components/views/RegisterView'
 import VaultView from '@/components/views/VaultView'
 import QuickstartView from '@/components/views/QuickstartView'
-import PreferencesView from '@/components/views/PreferencesView'
 
 Vue.use(VueRouter)
 
@@ -40,11 +39,6 @@ const routes = [
         path: '/quickstart',
         name: 'QuickstartView',
         component: QuickstartView
-    },
-    {
-        path: '/preferences',
-        name: 'PreferencesView',
-        component: PreferencesView
     }
 ]
 
