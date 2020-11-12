@@ -60,7 +60,7 @@ services:
     build:
       context: ../backend/replicator/maxwell
       dockerfile: Dockerfile
-    command: ./wait-for-it.sh mysql:3306 -t 45 -- ./bin/maxwell --user=maxwell --password=maxwell --host=mysql --producer=kafka --log_level=error --kafka.bootstrap.server=kafka:9092 --kafka_topic=secure-suite-maxwell
+    command: ./wait-for-it.sh mysql:3306 -t 200 -- ./bin/maxwell --user=maxwell --password=maxwell --host=mysql --producer=kafka --log_level=error --kafka.bootstrap.server=kafka:9092 --kafka_topic=secure-suite-maxwell
   consumer:
     container_name: consumer
     build: 
@@ -110,6 +110,9 @@ services:
       context: ../frontend/
       dockerfile: Dockerfile
     environment:
-      BACKEND_URI: http://localhost:5000
+      BACKEND_HOST: 192.168.1.165
       NODE_ENV: development
-  
+ 
+networks:
+  default:
+    driver: bridge

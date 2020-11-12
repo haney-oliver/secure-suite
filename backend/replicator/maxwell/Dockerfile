@@ -21,5 +21,5 @@ RUN cd /workspace \
 WORKDIR /app
 
 ADD ./wait-for-it.sh ./wait-for-it.sh
+CMD .wait-for-it.sh ${HOST}:3306 -t 200 --  bin/maxwell-docker
 
-CMD [ "/bin/bash", "-c", "bin/maxwell-docker" ]

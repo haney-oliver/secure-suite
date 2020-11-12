@@ -38,24 +38,23 @@ import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
 
-var session = JSON.parse(window.sessionStorage.vuex);
-
 export default {
   data() {
     return {
-      username: session.user.user_name,
-      userPassword: session.user.user_key,
-      userEmail: session.user.user_email,
+      session: Object,
+      username: "",
+      userPassword: "",
+      userEmail: ""
     };
   },
   methods: {
     updateUser() {
       axios
         .post(BACKEND_URI + "/api/UpdateUser", {
-          session_key: session.session_key,
-          user_key: session.user.user_key,
+          session_key: this.session.session_key,
+          user_key: this.session.user.user_key,
           user: {
-            user_key: session.user.user_key,
+            user_key: this.session.user.user_key,
             user_password: this.userPassword,
             user_email: this.userEmail 
           },
@@ -75,6 +74,12 @@ export default {
     closePreferencesModal() {
       EventBus.$emit("close-preferences-modal");
     },
+  },
+  mounted() {
+    this.session = JSON.parse(window.sessionStorage.vuex);
+    this.username = this.session.user.user_name;
+    this.userPassword = this.session.user.user_key;
+    this.userEmail = this.session.user.user_email;
   }
 };
 </script>
