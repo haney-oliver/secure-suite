@@ -22,8 +22,6 @@ CREATE TABLE IF NOT EXISTS secure_suite.user(
 CREATE TABLE IF NOT EXISTS secure_suite.session(
   session_key VARCHAR(36) UNIQUE NOT NULL,
   ref_user_key VARCHAR(36) UNIQUE NOT NULL,
-  time_create DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  time_update DATETIME ON UPDATE CURRENT_TIMESTAMP,
   locked_out BOOLEAN DEFAULT 0,
   PRIMARY KEY (session_key),
   FOREIGN KEY (ref_user_key) REFERENCES secure_suite.user(user_key)
