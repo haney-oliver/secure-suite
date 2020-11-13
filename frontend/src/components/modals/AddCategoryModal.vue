@@ -18,7 +18,7 @@
         v-model="category_desc"
       />
       <span class="buttons">
-        <button class="main-button" v-on:click="submitCategoryForm" id="submitCategoryButton">Add</button>
+        <button :class="{'main-button': !categoryAddSuccess, 'success-button': categoryAddSuccess}" v-on:click="submitCategoryForm" id="submitCategoryButton">{{ categoryAddSuccess ? 'Added' : 'Add' }}</button>
       </span>
     </div>
   </div>
@@ -33,7 +33,8 @@ export default {
   data() {
     return {
       category_name: "",
-      category_desc: ""
+      category_desc: "",
+      categoryAddSuccess: false
     };
   },
   methods: {
@@ -48,9 +49,12 @@ export default {
             category_name: this.category_name,
             category_description: this.category_desc 
           },
-        }).then(this.closeCategoryModal())
+        }).then(() => {
+          this.categoryAddSuccess = true;
+        })
         .catch((error) => {
           console.log(error);
+          this.categoryAddSuccess = false;
         });
     },
     toggleCategoryVisibility() {

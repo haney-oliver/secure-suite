@@ -27,7 +27,7 @@
           v-model="userEmail"
       />
       <span class="buttons">
-        <button class="main-button" v-on:click="updateUser" id="updateUserButton">Save</button>
+        <button :class="{'main-button': !userUpdateSuccess, 'success-button': userUpdateSuccess}" v-on:click="updateUser" id="updateUserButton">{{ userUpdateSuccess ? 'Saved' : 'Save' }}</button>
       </span>
     </div>
   </div>
@@ -44,7 +44,8 @@ export default {
       session: Object,
       username: "",
       userPassword: "",
-      userEmail: ""
+      userEmail: "",
+      userUpdateSuccess: false
     };
   },
   methods: {
@@ -59,8 +60,10 @@ export default {
             user_email: this.userEmail 
           },
         })
+        .then(this.userUpdateSuccess = true)
         .catch((error) => {
           console.log(error);
+          this.userUpdateSuccess = false;
         });
     },
     togglePasswordVisibility() {

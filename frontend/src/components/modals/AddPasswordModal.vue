@@ -50,7 +50,7 @@
       <a class="add-cat-button" v-on:click="openAddCategoryModal">Add a New Category</a>
       <span class="buttons">
         <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
-        <button class="main-button" v-on:click="submitPasswordForm" id="submitPasswordButton">Add</button>
+        <button :class="{'main-button': !passwordAddSuccess, 'success-button': passwordAddSuccess}" v-on:click="submitPasswordForm" id="submitPasswordButton">{{ passwordAddSuccess ? 'Added' : 'Add' }}</button>
       </span>
     </div>
     <div class="overlay"></div>
@@ -77,7 +77,8 @@ export default {
       password_url: "",
       password_content: "",
       category: Object,
-      addCategoryModalVisible: false
+      addCategoryModalVisible: false,
+      passwordAddSuccess: false
     };
   },
   methods: {
@@ -111,9 +112,10 @@ export default {
             password_category: this.password_category
           },
         })
-        .then(this.closePasswordModal())
+        .then(() => {this.passwordAddSuccess = true;})
         .catch((error) => {
           console.log(error);
+          this.passwordAddSuccess = false;
         });
     },
     togglePasswordVisibility() {
