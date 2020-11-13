@@ -49,6 +49,12 @@
       <category-list />
       <a class="add-cat-button" v-on:click="openAddCategoryModal">Add a New Category</a>
       <span class="buttons">
+        <div class="check-boxes">
+          <label for="numberCheck">Include Numbers:</label>
+          <input class="checkbox" v-model="includeNumbers" name="numberCheck" type="checkbox" />
+          <label for="symbolCheck">Include Symbols:</label>
+          <input class="checkbox" v-model="includeSymbols" type="checkbox" />
+        </div>
         <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
         <button :class="{'main-button': !passwordAddSuccess, 'success-button': passwordAddSuccess}" v-on:click="submitPasswordForm" id="submitPasswordButton">{{ passwordAddSuccess ? 'Added' : 'Add' }}</button>
       </span>
@@ -78,7 +84,9 @@ export default {
       password_content: "",
       category: Object,
       addCategoryModalVisible: false,
-      passwordAddSuccess: false
+      passwordAddSuccess: false,
+      includeSymbols: false,
+      includeNumbers: false,
     };
   },
   methods: {
@@ -88,6 +96,8 @@ export default {
         .post(BACKEND_URI + "/api/GeneratePassword", {
           session_key: session.session_key,
           user_key: session.user.user_key,
+          include_symbols: this.includeSymbols,
+          include_numbers: this.includeNumbers,
           length: this.length,
         })
         .then((response) => {

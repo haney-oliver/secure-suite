@@ -64,9 +64,6 @@ class Session(db.Model):
         db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(
         db.String(36), db.ForeignKey('user.user_key'), unique=True)
-    time_create = db.Column(db.DateTime(), nullable=False,
-                            default=datetime.utcnow())
-    time_update = db.Column(db.DateTime())
     locked_out = db.Column(db.Boolean(), default=False, nullable=False)
 
     def __init__(self, session_key, ref_user_key):
@@ -429,26 +426,18 @@ def login_user_api(request):
                     check_session = Session.query.filter_by(
                         ref_user_key=user.user_key).first()
                     if check_session == None:
-                        response["user"] = {
-                            "user_key": user.user_key,
-                            "user_name": user.user_name,
-                            "user_email": user.user_email
-                        }
+                        response["user"] = user.serialize
                         session = Session(str(uuid.uuid4()), user.user_key)
                         db.session.add(session)
                         db.session.commit()
-                        response["session"] = {
-                            "session_key": session.session_key,
-                            "ref_user_key": session.ref_user_key,
-                            "time_create": str(session.time_create),
-                            "time_update": str(session.time_update),
-                            "locked_out": session.locked_out
-                        }
+                        response["session"] = session.serialize
                         response["status"] = SUCCESS_STATUS
                         response["message"] = SUCCESS_MESSAGE_DEFAULT
                     else:
-                        response["status"] = UNAUTHORIZED_ERROR_STATUS
-                        response["message"] = "User already logged in."
+                        response["status"] = SUCCESS_STATUS
+                        response["message"] = SUCCESS_MESSAGE_DEFAULT
+                        response["session"] = check_session.serialize
+                        response["user"] = user.serialize
                 else:
                     response["status"] = UNAUTHORIZED_ERROR_STATUS
                     response["message"] = "Invalid credentials. Try again."
@@ -676,7 +665,11 @@ def generate_password_api(request):
                 response["message"] = SERVER_ERROR_MESSAGE_DEFAULT
             else:
                 try:
-                    alphabet = string.ascii_letters + string.digits
+                    alphabet = string.ascii_letters
+                    if data["include_numbers"]:
+                        alphabet += "0123456789"
+                    if data["include_symbols"]:
+                        alphabet += "!@#$%^&*()<>?/,.:;'\"\\[{]}-_=+"                    
                     password = ''.join(secrets.choice(alphabet)
                                        for i in range(int(data["length"])))
                     response["status"] = SUCCESS_STATUS
