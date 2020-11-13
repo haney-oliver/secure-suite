@@ -31,15 +31,14 @@ try:
     event_type = message["value"]["type"]
     timestamp = message["value"]["ts"]
     xid = message["value"]["xid"]
-    commited = message["value"]["commit"]
     data = message["value"]["data"]
     logging.info("EVENT Database: {}, Table: {}, Event Type: {}, Data: {}".format(database_name, table_name, event_type, data))
     
     dbp.execute("use audit")
-    dbp.execute("CREATE TABLE IF NOT EXISTS {}_events (`event_key` VARCHAR(36) NOT NULL, `table` VARCHAR(255) NOT NULL, `column` VARCHAR(255), `data` TEXT, `event_type` VARCHAR(255) NOT NULL, `commited` BOOLEAN NOT NULL, `xid` VARCHAR(255) NOT NULL, `timestamp` VARCHAR(255), PRIMARY KEY (`event_key`))".format(database_name))
-  
+    dbp.execute("CREATE TABLE IF NOT EXISTS {}_events (`event_key` VARCHAR(36) NOT NULL, `table` VARCHAR(255) NOT NULL, `column` VARCHAR(255), `data` VARCHAR(255), `event_type` VARCHAR(50) NOT NULL,  `xid` VARCHAR(255) NOT NULL, `timestamp` VARCHAR(255), PRIMARY KEY (`event_key`))".format(database_name))
+
   for c, v in data.items():
-    dbp.execute("INSERT INTO `{}_events` VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(database_name,uuid.uuid4(), table_name, c, v, event_type, int(commited), xid, timestamp))
+    dbp.execute("INSERT INTO `{}_events` VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}');".format(database_name, str(uuid.uuid4()), table_name, c, v, event_type, xid, timestamp))
 
 except Exception as e:
   logging.error(e)
