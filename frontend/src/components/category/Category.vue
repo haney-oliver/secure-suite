@@ -70,17 +70,14 @@ export default {
       this.categoryDeletionPopupVisible = false;
     })
     EventBus.$on("close-delete-password-popup",() => {
-      setTimeout(2000)
       this.fetchPasswords()
       this.$forceUpdate();
     })
     EventBus.$on("close-add-password-modal",() => {
-      setTimeout(2000)
       this.fetchPasswords();
       this.$forceUpdate();
     })
     EventBus.$on("close-edit-password-modal",() => {
-      setTimeout(2000)
       this.fetchPasswords();
       this.$forceUpdate();
     })

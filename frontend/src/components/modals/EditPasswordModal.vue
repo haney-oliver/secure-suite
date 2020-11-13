@@ -50,7 +50,7 @@
       </div>
       <span class="buttons">
         <button class="main-button" v-on:click="generatePassword" id="generatePasswordButton">Generate</button>
-        <button class="main-button" v-on:click="submitPasswordForm" id="submitPasswordButton">Update</button>
+        <button :class="{'main-button': !updatePasswordSuccess, 'success-button': updatePasswordSuccess}" v-on:click="submitPasswordForm" id="submitPasswordButton">{{ updatePasswordSuccess ? 'Updated' : 'Update' }}</button>
       </span>
     </div>
     <add-category-modal v-if="addCategoryModalVisible"/>
@@ -78,7 +78,8 @@ export default {
       password: Object,
       category: Object,
       addCategoryModalVisible: false,
-      addCategoryModalKey: 0
+      addCategoryModalKey: 0,
+      updatePasswordSuccess: false,
     };
   },
   methods: {
@@ -143,9 +144,10 @@ export default {
             ref_category_key: this.category.category_key
           },
         })
-        .then(this.closePasswordModal())
+        .then(this.updatePasswordSuccess = true)
         .catch((error) => {
           console.log(error);
+          this.updatePasswordSuccess = false;
         });
     },
     togglePasswordVisibility() {

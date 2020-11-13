@@ -5,7 +5,7 @@
       <h2 class="form-title">Are you sure you want to delete category?</h2>
       <p class="warning">Warning! This will delete all passwords in the category!</p>
       <span class="buttons">
-        <progress-button fillColor="#ffffff" :height="5" position="bottom" class="danger" v-on:click="deleteCategory" id="deleteCategoryButton">Delete</progress-button>
+        <button fillColor="#ffffff" :height="5" position="bottom" :class="{'danger': !categoryDeleteSuccess, 'success-button': categoryDeleteSuccess}" v-on:click="deleteCategory" id="deleteCategoryButton">{{ categoryDeleteSuccess ? 'Deleted' : 'Delete' }}</button>
       </span>
     </div>
   </div>
@@ -15,14 +15,15 @@
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
-import Button from 'vue-progress-button'
 
 export default {
-  components: {
-    "progress-button": Button
-  },
   props: {
     category: Object
+  },
+  data() {
+    return {
+      categoryDeleteSuccess: false
+    }
   },
   methods: {
     deleteCategory() {
@@ -32,9 +33,10 @@ export default {
           session_key: session.session_key,
           user_key: session.user.user_key,
           category_key: this.category.category_key,
-        }).then(this.closeCategoryDeletionPopup())
+        }).then(this.categoryDeleteSuccess = true)
         .catch((error) => {
           console.log(error);
+          this.categoryDeleteSuccess = false;
         });
     },
     closeCategoryDeletionPopup() {

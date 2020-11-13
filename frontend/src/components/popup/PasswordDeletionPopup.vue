@@ -4,7 +4,7 @@
     <div class="form" id="passwordDeletionPopupForm">
       <h2 class="form-title">Are you sure you want to delete password?</h2>
       <span class="buttons">
-        <progress-button :height="5" position="bottom" class="danger" v-on:click="deletePassword" id="deletePasswordButton">Delete</progress-button>
+        <button :height="5" position="bottom" :class="{'danger': !passwordDeleteSuccess, 'success-button': passwordDeleteSuccess}" v-on:click="deletePassword" id="deletePasswordButton">{{ passwordDeleteSuccess ? 'Deleted' : 'Delete' }}</button>
       </span>
     </div>
   </div>
@@ -14,14 +14,15 @@
 import axios from "axios";
 import { BACKEND_URI } from "@/main";
 import { EventBus } from "@/event-bus";
-import Button from 'vue-progress-button'
 
 export default {
-  components: {
-    "progress-button": Button
-  },
   props: {
     password: Object
+  },
+  data() {
+    return {
+      passwordDeleteSuccess: false
+    }
   },
   methods: {
     deletePassword() {
@@ -33,10 +34,11 @@ export default {
           password_key: this.password.password_key,
         })
         .then(() => {
-            this.closePasswordDeletionPopup()
+            this.passwordDeleteSuccess = true;
         })
         .catch((error) => {
           console.log(error);
+          this.passwordDeleteSuccess = false;
         });
     },
     closePasswordDeletionPopup() {
