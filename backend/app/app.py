@@ -63,7 +63,7 @@ class Session(db.Model):
     session_key = db.Column(
         db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(
-        db.String(36), db.ForeignKey('user.user_key'), unique=True)
+        db.String(36), db.ForeignKey('user.user_key'))
     locked_out = db.Column(db.Boolean(), default=False, nullable=False)
 
     def __init__(self, session_key, ref_user_key):
@@ -423,21 +423,13 @@ def login_user_api(request):
                 user = User.query.filter_by(
                     user_name=data["user_name"]).first()
                 if (user.user_password == hashlib.sha512((data["user_password"] + user.user_salt).encode('utf-8')).hexdigest()):
-                    check_session = Session.query.filter_by(
-                        ref_user_key=user.user_key).first()
-                    if check_session == None:
-                        response["user"] = user.serialize
-                        session = Session(str(uuid.uuid4()), user.user_key)
-                        db.session.add(session)
-                        db.session.commit()
-                        response["session"] = session.serialize
-                        response["status"] = SUCCESS_STATUS
-                        response["message"] = SUCCESS_MESSAGE_DEFAULT
-                    else:
-                        response["status"] = SUCCESS_STATUS
-                        response["message"] = SUCCESS_MESSAGE_DEFAULT
-                        response["session"] = check_session.serialize
-                        response["user"] = user.serialize
+                    response["user"] = user.serialize
+                    session = Session(str(uuid.uuid4()), user.user_key)
+                    db.session.add(session)
+                    db.session.commit()
+                    response["session"] = session.serialize
+                    response["status"] = SUCCESS_STATUS
+                    response["message"] = SUCCESS_MESSAGE_DEFAULT
                 else:
                     response["status"] = UNAUTHORIZED_ERROR_STATUS
                     response["message"] = "Invalid credentials. Try again."
