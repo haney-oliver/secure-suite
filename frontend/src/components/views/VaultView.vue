@@ -153,22 +153,22 @@ export default {
       }
     );
   },
-  // watch: {
-  //   filter: function () {
-  //     if (this.filter == "") {
-  //       this.renderCategories = this.categories;
-  //     }
-  //     if (this.filter != "") {
-  //       var filterLength = this.filter.length;
-  //       this.renderCategories = this.categories.filter((category) => {
-  //         var catSub = category.category_name
-  //           .toLowerCase()
-  //           .substr(0, filterLength);
-  //         return catSub == this.filter.toLowerCase();
-  //       });
-  //     }
-  //   },
-  // },
+  watch: {
+    filter: function () {
+      if (this.filter == "") {
+        this.renderCategories = this.categories;
+      }
+      if (this.filter != "") {
+        var filterLength = this.filter.length;
+        this.renderCategories = this.categories.filter((category) => {
+          var catSub = category.category_name
+            .toLowerCase()
+            .substr(0, filterLength);
+          return catSub == this.filter.toLowerCase();
+        });
+      }
+    },
+  },
 };
 </script>
 
