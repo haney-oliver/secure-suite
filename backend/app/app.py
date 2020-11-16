@@ -63,7 +63,7 @@ class Session(db.Model):
     session_key = db.Column(
         db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(
-        db.String(36), db.ForeignKey('user.user_key'))
+        db.String(36), db.ForeignKey('user.user_key'), unique=False)
     locked_out = db.Column(db.Boolean(), default=False, nullable=False)
 
     def __init__(self, session_key, ref_user_key):
