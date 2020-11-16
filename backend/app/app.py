@@ -63,7 +63,7 @@ class Session(db.Model):
     session_key = db.Column(
         db.String(36), primary_key=True, nullable=False, unique=True)
     ref_user_key = db.Column(
-        db.String(36), db.ForeignKey('user.user_key'), unique=False)
+        db.String(36), unique=False)
     locked_out = db.Column(db.Boolean(), default=False, nullable=False)
 
     def __init__(self, session_key, ref_user_key):
@@ -193,7 +193,7 @@ def validate_user_and_session(user_key, session_key):
     if user_key != None and session_key != None:
         user = User.query.get(user_key)
         session = Session.query.get(session_key)
-        if user.user_key == session.ref_user_key and session.locked_out == False:
+        if (user != None and session !=None) and (user.user_key == session.ref_user_key and session.locked_out == False):
             return True
     return False
 
