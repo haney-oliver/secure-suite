@@ -1,71 +1,59 @@
 <template>
-  <div class="form" id="loginForm">
-    <img class="logo" src="@/assets/secure-suite-logo.svg" />
-    <input
-      class="input-field"
-      type="text"
-      v-model="username"
-      placeholder="Username"
-    />
-    <input
-      class="input-field"
-      type="password"
-      v-model="userPassword"
-      placeholder="Password"
-    />
-    <span class="buttons">
-      <button class="main-button" v-on:click="login" id="loginButton">
-        <span class="button-content">Login</span>
-      </button>
-    </span>
+  <div class="navbar">
+    <span class="title">SECURE SUITE</span>
+    <ul class="options">
+      <li>
+        <a href="http://192.168.1.165:8080/">Home</a>
+      </li>
+      <li v-if="user">
+        <a class="alternative" @click="logOut">Logout</a>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+import { EventBus } from "@/event-bus";
 import axios from "axios";
 import store from "@/store";
 import router from "@/router/index";
-import { EventBus } from "@/event-bus";
 
 export default {
-  name: "Login",
+  name: "Navbar",
   data() {
     return {
-      username: "",
-      userPassword: "",
+      showList: false,
+      user: Object,
+      session_key: String,
     };
   },
   methods: {
-    login() {
+    logOut() {
       axios
-        .post("http://192.168.1.165:5000/api/LoginUser", {
-          user_name: this.username,
-          user_password: this.userPassword,
+        .post("http://192.168.1.165:5000/api/LogoutUser", {
+          user_key: this.user.user_key,
+          session_key: this.session_key,
         })
-        .then((response) => {
-          var data = {
-            user: response.data.user,
-            session_key: response.data.session.session_key,
-          };
-          store
-            .dispatch("setUserAndSession", data)
-            .catch((error) => console.log(error));
-          var user = JSON.stringify(data.user);
-          var session_key = data.session_key;
-          browser.storage.local.set({ user, session_key }).then(() => {
-            router.replace("/vault");
-            browser.runtime.sendMessage({
-              type: "notification",
-              options: {
-                type: "basic",
-                message: { user: data.user, session_key: data.session_key },
-              },
-            });
-            console.log("Storage updated!");
+        .then(() => {
+          browser.storage.local.clear().then(() => {
+            console.log("Logged out and cleared");
+            store.dispatch("removeUserAndSession");
+            router.replace("/login");
           });
         })
-        .catch((error) => console.log(error));
+        .catch((response) => console.log(response.message));
     },
+  },
+  mounted() {
+    browser.storage.local.get("user").then((obj) => {
+      this.user = JSON.parse(obj.user);
+      console.log(this.user);
+      browser.storage.local.get("session_key").then((obj) => {
+        this.session_key = obj.session_key;
+        console.log(this.session_key);
+      });
+    });
   },
 };
 </script>
@@ -237,31 +225,55 @@ h2 {
   padding-right: 25px;
 }
 
-footer {
-  margin: 8rem auto 8rem auto;
-  display: block;
-  text-align: center;
-}
+.navbar {
+  height: 65px;
+  width: 100%;
+  background-color: #6480ff;
+  margin: 0;
+  z-index: 100;
+  font: 100% $font-stack;
+  margin-bottom: 0.25rem;
 
-a {
-  text-decoration: none;
-  color: $button-color;
-}
-
-a:hover {
-  color: $button-hover;
-}
-
-.login-view {
-  .form {
-    margin-top: 5rem;
+  .title {
+    display: block;
+    float: left;
+    margin: 1.35rem 0 0 1rem;
+    font-weight: 700;
+    color: #c2c3ff;
+    font: 100% $font-stack;
   }
-}
 
-.logo {
-  height: 200px;
-  width: 200px;
-  display: block;
-  margin: 1rem auto 1rem auto;
+  .options {
+    float: right;
+    list-style-type: none;
+    display: block;
+    padding: 0 1rem 0 0;
+    margin-top: 1.25rem;
+    font: 100% $font-stack;
+
+    li {
+      display: inline-block;
+      font-size: 14px;
+
+      a {
+        cursor: pointer;
+        text-decoration: none;
+        color: rgb(255, 255, 255);
+        padding: 1rem;
+        font: 100% $font-stack;
+      }
+
+      a:hover {
+        background-color: #4f6fff;
+        transition: 0.5s;
+      }
+
+      .alternative:hover {
+        color: #4f6fff;
+        background-color: #ffffff;
+        transition: 0.5s;
+      }
+    }
+  }
 }
 </style>

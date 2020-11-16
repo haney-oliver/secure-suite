@@ -23,6 +23,8 @@ export default {
     return {
       passwords: [],
       showCat: false,
+      user: Object,
+      session_key: String
     };
   },
   components: {
@@ -30,11 +32,10 @@ export default {
   },
   methods: {
     fetchPasswords() {
-      var session = JSON.parse(window.sessionStorage.vuex);
       axios
         .post("http://192.168.1.165:5000/api/ListPasswords", {
-          session_key: session.session_key,
-          user_key: session.user.user_key,
+          session_key: this.session_key,
+          user_key: this.user.user_key,
           ref_category_key: this.category.category_key
         })
         .then(response => {
@@ -51,7 +52,15 @@ export default {
     }
   },
   mounted() {
-    this.fetchPasswords();
+    browser.storage.local.get("user").then((obj) => {
+      this.user = JSON.parse(obj.user);
+      console.log(this.user);
+      browser.storage.local.get("session_key").then((obj) => {
+        this.session_key = obj.session_key;
+        console.log(this.session_key);
+        this.fetchPasswords();
+      });
+    });
   }
 };
 </script>

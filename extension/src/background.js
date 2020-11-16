@@ -18,12 +18,12 @@ function logURLBeforeNavigation(details) {
 
 }
 
-browser.webNavigation.onBeforeNavigate.addListener(logURLBeforeNavigation);
+browser.webNavigation.onHistoryStateUpdated.addListener(logURLBeforeNavigation);
 
 browser.runtime.onMessage.addListener(function(request, sender) {
     data = request.options.message;
     user_key = data.user.user_key;
-    session_key = data.session_key;   
+    session_key = data.session_key;  
 })
 
 
