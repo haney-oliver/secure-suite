@@ -661,7 +661,7 @@ def generate_password_api(request):
                     if data["include_numbers"]:
                         alphabet += "0123456789"
                     if data["include_symbols"]:
-                        alphabet += "!@#$%^&*()<>?/,.:;'\"\\[{]}-_=+"                    
+                        alphabet += "!@#$%^&*<>?/,.-_"                    
                     password = ''.join(secrets.choice(alphabet)
                                        for i in range(int(data["length"])))
                     response["status"] = SUCCESS_STATUS
