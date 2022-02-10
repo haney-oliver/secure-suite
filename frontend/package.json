@@ -16,7 +16,7 @@
     "core-js": "^3.6.4",
     "epic-spinners": "^1.1.0",
     "idle-vue": "^2.0.5",
-    "node-sass": "^4.14.1",
+    "node-sass": "^7.0.0",
     "sass-loader": "^8.0.2",
     "vue": "^2.6.11",
     "vue-chartjs": "^3.5.0",
